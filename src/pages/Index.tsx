@@ -8,6 +8,7 @@ import WarMap from "@/components/WarMap";
 import Treasury from "@/components/Treasury";
 import Sponsors from "@/components/Sponsors";
 import Mentors from "@/components/Mentors";
+import LocationSection from "@/components/LocationSection";
 import PastEditions from "@/components/PastEditions";
 import FAQ from "@/components/FAQ";
 import Footer from "@/components/Footer";
@@ -350,7 +351,15 @@ const Index = () => {
           <StorySection />
         </ScrollAnimation>
 
-        <ScrollAnimation animation="fadeUp">
+        {/*
+          Fires while WarMap is still well below the viewport (rather than
+          the usual 'top 88%') so its fade-up finishes before any part of it
+          is actually visible. Its cavern background has to colour-match
+          StorySection above it exactly; catching it mid-fade during a fast
+          scroll made that boundary flash as a hard edge for a moment before
+          settling.
+        */}
+        <ScrollAnimation animation="fadeUp" start="top bottom+=600">
           <WarMap />
         </ScrollAnimation>
 
@@ -364,6 +373,10 @@ const Index = () => {
 
         <ScrollAnimation animation="fadeUp">
           <Mentors />
+        </ScrollAnimation>
+
+        <ScrollAnimation animation="fadeUp">
+          <LocationSection />
         </ScrollAnimation>
 
         <ScrollAnimation animation="fadeUp">

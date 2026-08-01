@@ -65,8 +65,10 @@ const Footer = ({ onEasterEgg }: FooterProps) => {
 
       {/* Main Footer Content */}
       <div className="relative z-10 container mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-12 lg:py-16">
-        {/* Mobile: Stack everything, Tablet: 2 columns, Desktop: 5 columns with map */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-8 sm:gap-10 lg:gap-6">
+        {/* Mobile: Stack everything, Tablet: 2 columns, Desktop: 4 columns.
+            The location map used to live here as a 5th column — it's now its
+            own section right after Mentors, so this grid dropped a column. */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 sm:gap-10 lg:gap-8">
           
           {/* Organised By */}
           <div className="col-span-1 sm:col-span-2 lg:col-span-1">
@@ -163,23 +165,6 @@ const Footer = ({ onEasterEgg }: FooterProps) => {
             </ul>
           </div>
 
-          {/* Google Map */}
-          <div className="col-span-1 sm:col-span-2 lg:col-span-1">
-            <h2 className="font-display text-lg sm:text-xl text-foreground mb-4 sm:mb-5 underline underline-offset-4 decoration-gold-coin/50 lg:hidden">
-              Location
-            </h2>
-            <div className="relative w-full h-40 sm:h-48 lg:h-52 rounded-xl overflow-hidden border-2 border-border/30 shadow-lg">
-              <iframe 
-                src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3684.501244011331!2d88.48770200862216!3d22.56034883333806!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3a020b007af9ca31%3A0xa3a41f4146303146!2sUEM!5e0!3m2!1sen!2sin!4v1731930397063!5m2!1sen!2sin" 
-                className="absolute top-0 left-0 w-full h-full" 
-                style={{ border: 0 }} 
-                loading="lazy" 
-                referrerPolicy="no-referrer-when-downgrade" 
-                aria-label="UEM location map"
-                title="UEM Location"
-              />
-            </div>
-          </div>
         </div>
       </div>
 

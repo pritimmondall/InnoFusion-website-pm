@@ -199,6 +199,22 @@
     -moz-osx-font-smoothing: grayscale;
   }
 
+  /*
+   * Site-wide custom cursor — a short sword tilted toward the left, hotspot
+   * set at its tip (1, 0) so clicks register where the point is, not the
+   * handle. `!important` because Tailwind's `cursor-pointer` utility (used
+   * on most buttons/links) is a class selector and would otherwise beat a
+   * plain `*` rule.
+   */
+  *, *::before, *::after {
+    cursor: url('/sword-cursor.png') 1 0, auto !important;
+  }
+
+  /* Text fields keep the native I-beam so it's still obvious they're typable. */
+  input, textarea, [contenteditable="true"] {
+    cursor: text !important;
+  }
+
   h1, h2, h3, h4, h5, h6 {
     @apply font-display;
     text-wrap: balance;

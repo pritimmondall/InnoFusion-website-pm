@@ -1,6 +1,5 @@
-import type { CSSProperties } from "react";
 import React from "react";
-import { motion, useMotionValue, useTransform, animate } from "framer-motion";
+import { motion } from "framer-motion";
 import { useTheme } from "@/contexts/ThemeContext";
 
 interface SpecialPrize {
@@ -11,203 +10,173 @@ interface SpecialPrize {
   themeColor: string;
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// SAFARI FIX EXPLAINED
-// ─────────────────────────────────────────────────────────────────────────────
-// Safari has a longstanding bug where `backface-visibility: hidden` fails when
-// the parent uses `transform-style: preserve-3d`. The previous implementation
-// relied on exactly that pattern, causing the front face to show through (mirrored)
-// during the flip in Safari.
-//
-// THE FIX: Eliminate `transform-style: preserve-3d` entirely.
-// Instead, each face gets its own `perspective(1000px)` baked directly into its
-// `transform` value (e.g. `perspective(1000px) rotateY(0deg)`). This gives each
-// face its own independent 3D context — no parent preserve-3d needed.
-// Visibility is controlled via Framer Motion's `useTransform` → opacity MotionValue,
-// so we don't rely on `backface-visibility` at all. The result is pixel-identical
-// to the intended design, but works correctly in Safari, Chrome, and Firefox.
-// ─────────────────────────────────────────────────────────────────────────────
+/*
+ * Redesign notes
+ * ─────────────────────────────────────────────────────────────────────────
+ * The previous version was a 3D flip card: a flat solid-gold front panel
+ * that clashed with the frosted-glass language the rest of the site now
+ * uses (Sponsors, Treasury, Clan Leaders), and a flip-on-hover interaction
+ * that has no real affordance on touch devices — nothing on the front face
+ * hinted that tapping would do anything.
+ *
+ * This version drops the flip entirely. Every card shows its logo, name,
+ * full description and CTAs at all times, styled as translucent glass
+ * tinted with the sponsor's own theme colour — the same diagonal-gradient
+ * card language established in Treasury's TrackPrizeCard. Hover is a CSS
+ * transform + border glow (compositor-only), not a JS-animated box-shadow.
+ */
 
-const BountyCard: React.FC<{ prize: SpecialPrize; isNight: boolean }> = ({
-  prize,
-  isNight,
-}) => {
+function hexToRgba(hex: string, alpha: number): string {
+  const clean = hex.replace("#", "");
+  const r = parseInt(clean.slice(0, 2), 16);
+  const g = parseInt(clean.slice(2, 4), 16);
+  const b = parseInt(clean.slice(4, 6), 16);
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+
+/* Transparent-background logos drawn in near-black ink — invisible on a
+   tinted glass card without a light plate behind them. */
+const NEEDS_LIGHT_PLATE = new Set(["Wolfram", "CodeCrafters"]);
+
+/* Logos that ship as their own full-bleed opaque tile. A plate would frame
+   them oddly; they just need an edge to separate from the glass behind. */
+const DARK_TILE = new Set(["Avalanche"]);
+
+const BountyCard: React.FC<{ prize: SpecialPrize; index: number }> = ({ prize, index }) => {
+  const c = prize.themeColor;
   const isNavigable = prize.link && prize.link !== "#";
-
-  // Single motion value drives the whole animation: 0 = front, 180 = back.
-  const rotateY = useMotionValue(0);
-
-  // ── Per-face transforms ──────────────────────────────────────────────────
-  // Each face carries `perspective(1000px)` in its own transform so no parent
-  // preserve-3d is required (that's the root cause of the Safari bug).
-  const frontTransform = useTransform(
-    rotateY,
-    (v) => `perspective(1000px) rotateY(${v}deg)`
-  );
-  // Back face starts at -180 deg (facing away) and ends at 0 deg (facing us).
-  const backTransform = useTransform(
-    rotateY,
-    (v) => `perspective(1000px) rotateY(${v - 180}deg)`
-  );
-
-  // ── Opacity ─────────────────────────────────────────────────────────────
-  // Hard step at 90 deg: only one face is ever visible at a time.
-  // This replaces backface-visibility entirely — 100% reliable in Safari.
-  const frontOpacity = useTransform(rotateY, [0, 89.99, 90, 180], [1, 1, 0, 0]);
-  const backOpacity  = useTransform(rotateY, [0, 89.99, 90, 180], [0, 0, 1, 1]);
-
-  // ── Pointer events ───────────────────────────────────────────────────────
-  // Prevent the hidden face from intercepting clicks.
-  const frontPointer = useTransform<number, CSSProperties["pointerEvents"]>(
-    frontOpacity,
-    (o) => (o > 0 ? "auto" : "none")
-  );
-  const backPointer = useTransform<number, CSSProperties["pointerEvents"]>(
-    backOpacity,
-    (o) => (o > 0 ? "auto" : "none")
-  );
-
-  // ── Flip handlers ────────────────────────────────────────────────────────
-  const flipIn  = () => animate(rotateY, 180, { duration: 0.6, ease: [0.4, 0.2, 0.2, 1] });
-  const flipOut = () => animate(rotateY, 0,   { duration: 0.6, ease: [0.4, 0.2, 0.2, 1] });
-
-  const handleMouseEnter = () => flipIn();
-  const handleMouseLeave = () => flipOut();
-
-  const handleClick = () => {
-    // Touch-only devices (no hover): toggle on tap
-    if (
-      typeof window !== "undefined" &&
-      window.matchMedia("(hover: none)").matches
-    ) {
-      if (rotateY.get() < 90) {
-        flipIn();
-      } else {
-        flipOut();
-      }
-    }
-  };
-
-  // ── Visual tokens ────────────────────────────────────────────────────────
-  const borderColor  = "#C4920A";
-  const bottomShadow = "#7A5808";
-  const frontBg = "linear-gradient(180deg, #ffdc73 0%, #df9926 100%)";
-  const backBg  = isNight
-    ? "linear-gradient(180deg, #1e1630 0%, #130d20 100%)"
-    : "linear-gradient(180deg, #1e1525 0%, #110b17 100%)";
-  const sharedBorder = `3px solid ${borderColor}`;
-  const sharedShadow = `0 6px 0 ${bottomShadow}, 0 10px 20px rgba(0,0,0,0.5)`;
+  const needsPlate = NEEDS_LIGHT_PLATE.has(prize.name);
+  const isDarkTile = DARK_TILE.has(prize.name);
 
   return (
     <motion.div
-      whileHover={{ scale: 1.02 }}
-      // `cursor` follows the current visible face
-      className="relative w-72 h-[300px] cursor-pointer"
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
-      onClick={handleClick}
+      initial={{ opacity: 0, y: 26, scale: 0.96 }}
+      whileInView={{ opacity: 1, y: 0, scale: 1 }}
+      viewport={{ once: true, margin: "-40px" }}
+      transition={{ delay: Math.min(index, 8) * 0.07, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+      className="bounty-card group relative w-full h-full"
     >
-      {/* ── FRONT FACE (Gold logo panel) ──────────────────────────────────── */}
-      <motion.div
-        className="absolute inset-0 rounded-2xl flex flex-col items-center justify-center overflow-hidden"
+      <div
+        className="relative flex flex-col h-full rounded-2xl overflow-hidden p-5"
         style={{
-          transform:     frontTransform,
-          opacity:       frontOpacity,
-          pointerEvents: frontPointer,
-          background:    frontBg,
-          border:        sharedBorder,
-          boxShadow:     sharedShadow,
+          background: `linear-gradient(165deg, ${hexToRgba(c, 0.18)} 0%, rgba(255,255,255,0.03) 42%, rgba(10,10,12,0.55) 100%)`,
+          border: `1px solid ${hexToRgba(c, 0.4)}`,
+          backdropFilter: "blur(14px)",
+          WebkitBackdropFilter: "blur(14px)",
+          boxShadow: "0 8px 24px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.06)",
         }}
       >
-        {/* Rivets */}
-        <span className="absolute top-2 left-2  w-2 h-2 rounded-full bg-[#1a110a] border border-[#4a3320]" />
-        <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-[#1a110a] border border-[#4a3320]" />
-        <span className="absolute bottom-2 left-2  w-2 h-2 rounded-full bg-[#1a110a] border border-[#4a3320]" />
-        <span className="absolute bottom-2 right-2 w-2 h-2 rounded-full bg-[#1a110a] border border-[#4a3320]" />
+        {/* Ambient colour wash from the top, matches Treasury's card language */}
+        <div
+          className="absolute inset-x-0 top-0 h-2/3 pointer-events-none"
+          style={{ background: `radial-gradient(ellipse at 50% 0%, ${hexToRgba(c, 0.22)} 0%, transparent 70%)` }}
+        />
 
-        <img
-          src={prize.logo}
-          alt={prize.name}
-          className="relative z-10 max-h-[120px] max-w-[70%] object-contain drop-shadow-md"
-        loading="lazy" decoding="async" />
-      </motion.div>
+        {/* Sheen sweep on hover — CSS only, no per-frame JS animation */}
+        <div
+          className="bounty-sheen absolute inset-0 pointer-events-none"
+          style={{
+            background: `linear-gradient(115deg, transparent 35%, ${hexToRgba(c, 0.22)} 48%, rgba(255,255,255,0.14) 52%, transparent 65%)`,
+          }}
+        />
 
-      {/* ── BACK FACE (Dark description panel) ────────────────────────────── */}
-      <motion.div
-        className="absolute inset-0 rounded-2xl flex flex-col items-center p-5 overflow-hidden"
-        style={{
-          transform:     backTransform,
-          opacity:       backOpacity,
-          pointerEvents: backPointer,
-          background:    backBg,
-          border:        sharedBorder,
-          boxShadow:     sharedShadow,
-        }}
-      >
-        {/* Rivets */}
-        <span className="absolute top-2 left-2  w-2 h-2 rounded-full bg-[#1a110a] border border-[#4a3320]" />
-        <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-[#1a110a] border border-[#4a3320]" />
-        <span className="absolute bottom-2 left-2  w-2 h-2 rounded-full bg-[#1a110a] border border-[#4a3320]" />
-        <span className="absolute bottom-2 right-2 w-2 h-2 rounded-full bg-[#1a110a] border border-[#4a3320]" />
+        {/* Corner rivets */}
+        <span className="absolute top-2.5 left-2.5 w-1.5 h-1.5 rounded-full bg-black/50 border border-white/10 pointer-events-none" />
+        <span className="absolute top-2.5 right-2.5 w-1.5 h-1.5 rounded-full bg-black/50 border border-white/10 pointer-events-none" />
+        <span className="absolute bottom-2.5 left-2.5 w-1.5 h-1.5 rounded-full bg-black/50 border border-white/10 pointer-events-none" />
+        <span className="absolute bottom-2.5 right-2.5 w-1.5 h-1.5 rounded-full bg-black/50 border border-white/10 pointer-events-none" />
 
+        {/* Logo */}
+        <div className="relative z-10 flex items-center justify-center h-20 mb-3">
+          {needsPlate ? (
+            <div
+              className="flex items-center justify-center rounded-xl px-4 py-3 max-w-full max-h-full"
+              style={{ background: "rgba(244,244,248,0.94)", boxShadow: "0 4px 14px rgba(0,0,0,0.4)" }}
+            >
+              <img
+                src={prize.logo}
+                alt={prize.name}
+                className="max-h-[52px] max-w-full object-contain"
+                loading="lazy"
+                decoding="async"
+              />
+            </div>
+          ) : (
+            <img
+              src={prize.logo}
+              alt={prize.name}
+              className={`max-h-[72px] max-w-[75%] object-contain ${isDarkTile ? "rounded-lg" : ""}`}
+              loading="lazy"
+              decoding="async"
+              style={
+                isDarkTile
+                  ? {
+                      border: "1px solid rgba(255,255,255,0.3)",
+                      boxShadow: "0 4px 14px rgba(0,0,0,0.5)",
+                    }
+                  : { filter: `drop-shadow(0 0 10px ${hexToRgba(c, 0.35)})` }
+              }
+            />
+          )}
+        </div>
+
+        {/* Name */}
         <h4
-          className="relative z-10 font-display text-2xl tracking-wider text-center mb-1 mt-2 text-[#FFD700]"
-          style={{ textShadow: "0 2px 4px rgba(0,0,0,0.8)" }}
+          className="relative z-10 font-display text-lg tracking-wide text-center mb-1"
+          style={{ color: c, textShadow: "0 2px 4px rgba(0,0,0,0.7)" }}
         >
           {prize.name}
         </h4>
 
-        <div className="w-16 h-[2px] rounded-full mb-4 opacity-60 bg-[#C4920A]" />
+        <div
+          className="relative z-10 w-10 h-px mx-auto mb-3"
+          style={{ background: `linear-gradient(90deg, transparent, ${hexToRgba(c, 0.7)}, transparent)` }}
+        />
 
-        <div className="relative z-10 w-full flex-1">
-          <p className="font-body text-[14px] leading-relaxed text-[#e6e0d4] text-center drop-shadow-md px-1">
-            {prize.description}
-          </p>
-        </div>
+        {/* Description — always visible, no hover/flip gating */}
+        <p className="relative z-10 font-body text-[13px] leading-relaxed text-center text-gray-300 flex-1">
+          {prize.description}
+        </p>
 
-        {/* CTA Buttons */}
-        <div className="w-full flex gap-2 z-20 mt-2">
-          <button type="button"
-            onClick={(e) => {
-              e.stopPropagation();
+        {/* CTAs */}
+        <div className="relative z-10 w-full flex gap-2 mt-4">
+          <button
+            type="button"
+            onClick={() =>
               window.open(
                 "https://innofusion.notion.site/InnoFusion-3-0-Participant-Benefits-341e586c7bb480419a63ebfb42e81cd5",
                 "_blank",
                 "noopener,noreferrer"
-              );
-            }}
-            className="flex-1 flex items-center justify-center py-2.5 rounded-lg text-xs font-bold font-display tracking-widest uppercase transition-all duration-100 hover:brightness-110 active:translate-y-1"
+              )
+            }
+            className="bounty-btn flex-1 flex items-center justify-center py-2.5 rounded-lg text-[11px] font-bold font-display tracking-widest uppercase text-white"
             style={{
-              background:  "linear-gradient(180deg, #5aacf5 0%, #1a6fd4 100%)",
-              border:      "1.5px solid #1050a0",
-              boxShadow:   "0 3px 0 #1050a0, 0 4px 6px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.4)",
-              color:       "white",
-              textShadow:  "0 1px 2px rgba(0,0,0,0.5)",
+              background: "linear-gradient(180deg, #5aacf5 0%, #1a6fd4 100%)",
+              border: "1.5px solid #1050a0",
+              boxShadow: "0 3px 0 #1050a0, inset 0 1px 0 rgba(255,255,255,0.35)",
+              textShadow: "0 1px 2px rgba(0,0,0,0.5)",
             }}
           >
             Details
           </button>
 
           {isNavigable && (
-            <button type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                window.open(prize.link, "_blank", "noopener,noreferrer");
-              }}
-              className="flex-1 flex items-center justify-center py-2.5 rounded-lg text-xs font-bold font-display tracking-widest uppercase transition-all duration-100 hover:brightness-110 active:translate-y-1"
+            <button
+              type="button"
+              onClick={() => window.open(prize.link, "_blank", "noopener,noreferrer")}
+              className="bounty-btn flex-1 flex items-center justify-center py-2.5 rounded-lg text-[11px] font-bold font-display tracking-widest uppercase text-white"
               style={{
-                background:  "linear-gradient(180deg, #8ede43 0%, #519b16 100%)",
-                border:      "1.5px solid #2d5a0c",
-                boxShadow:   "0 3px 0 #2d5a0c, 0 4px 6px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.4)",
-                color:       "white",
-                textShadow:  "0 1px 2px rgba(0,0,0,0.5)",
+                background: "linear-gradient(180deg, #8ede43 0%, #519b16 100%)",
+                border: "1.5px solid #2d5a0c",
+                boxShadow: "0 3px 0 #2d5a0c, inset 0 1px 0 rgba(255,255,255,0.35)",
+                textShadow: "0 1px 2px rgba(0,0,0,0.5)",
               }}
             >
               Visit
             </button>
           )}
         </div>
-      </motion.div>
+      </div>
     </motion.div>
   );
 };
@@ -224,7 +193,7 @@ const SpecialPrizes = () => {
       link: "https://www.n8n.io/",
       description:
         "Every finalist gets n8n Cloud Pro access (valued at €60/license) to build complete automation workflows.",
-      themeColor: "#a855f7",
+      themeColor: "#ec4899",
     },
     {
       name: "Wolfram",
@@ -232,7 +201,7 @@ const SpecialPrizes = () => {
       link: "#",
       description:
         "1 month of Wolfram|One: full Wolfram Language access, 5k API calls, 5k Cloud Credits, 2 installs & 2GB Storage.",
-      themeColor: "#a855f7",
+      themeColor: "#dc2626",
     },
     {
       name: "Avalanche",
@@ -240,7 +209,7 @@ const SpecialPrizes = () => {
       link: "https://www.avax.network/",
       description:
         "₹3,000 cash prize for winning teams in Blockchain/Web3 & AR/VR tracks, plus exclusive Avalanche-branded merch.",
-      themeColor: "#eab308",
+      themeColor: "#e84142",
     },
     {
       name: "CodeCrafters",
@@ -248,7 +217,7 @@ const SpecialPrizes = () => {
       link: "https://codecrafters.io/",
       description:
         "Top 3 teams win VIP memberships ($360/yr): 🥇 2-year, 🥈 1-year, 🥉 6-month — build Git, Docker & SQLite.",
-      themeColor: "#eab308",
+      themeColor: "#38bdf8",
     },
     {
       name: "Edubuk",
@@ -256,7 +225,7 @@ const SpecialPrizes = () => {
       link: "https://edubuk.com/",
       description:
         "Lifetime blockchain-verified digital badges via eSeal, plus 3 months free access to TruCV and TruJobs.",
-      themeColor: "#ef4444",
+      themeColor: "#14b8a6",
     },
     {
       name: "Mastra AI",
@@ -264,7 +233,7 @@ const SpecialPrizes = () => {
       link: "https://www.mastra.ai/",
       description:
         "Every finalist receives a copy of a technical book to level up their AI and software development skill sets.",
-      themeColor: "#ef4444",
+      themeColor: "#a855f7",
     },
     {
       name: "navan ai",
@@ -272,7 +241,7 @@ const SpecialPrizes = () => {
       link: "https://www.navan.ai/",
       description:
         "Access to multi-agent framework + free Skool community access ($19/month) for coding courses & networking.",
-      themeColor: "#ef4444",
+      themeColor: "#f97316",
     },
     {
       name: "Keploy",
@@ -288,7 +257,7 @@ const SpecialPrizes = () => {
       link: "https://gen.xyz/",
       description:
         "Free .xyz domains for all Finalists, Evangelists & Top 30 teams to host their hackathon builds.",
-      themeColor: "#22c55e",
+      themeColor: "#eab308",
     },
   ];
 
@@ -299,6 +268,28 @@ const SpecialPrizes = () => {
       viewport={{ once: true }}
       className="mt-16 sm:mt-24 max-w-6xl mx-auto px-4"
     >
+      <style>{`
+        .bounty-sheen {
+          transform: translateX(-130%);
+          transition: transform .7s ease;
+        }
+        .bounty-card > div {
+          transition: transform .28s cubic-bezier(.22,1,.36,1),
+                      box-shadow .28s ease, border-color .28s ease;
+        }
+        .bounty-card:hover > div {
+          transform: translateY(-6px);
+          box-shadow: 0 16px 34px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.1);
+        }
+        .bounty-card:hover .bounty-sheen { transform: translateX(130%); }
+        .bounty-btn { transition: filter .15s ease, transform .1s ease; }
+        .bounty-btn:hover { filter: brightness(1.12); }
+        .bounty-btn:active { transform: translateY(2px); }
+        @media (prefers-reduced-motion: reduce) {
+          .bounty-card > div, .bounty-sheen { transition: none; }
+        }
+      `}</style>
+
       <div className="text-center mb-10 sm:mb-16">
         <h3
           className={`font-display text-2xl sm:text-3xl md:text-4xl mb-3 ${
@@ -314,17 +305,9 @@ const SpecialPrizes = () => {
         </p>
       </div>
 
-      <div className="flex flex-wrap justify-center gap-8 sm:gap-10">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8 items-stretch">
         {specialPrizes.map((prize, index) => (
-          <motion.div
-            key={prize.name}
-            initial={{ opacity: 0, scale: 0.9 }}
-            whileInView={{ opacity: 1, scale: 1 }}
-            viewport={{ once: true }}
-            transition={{ delay: index * 0.1 }}
-          >
-            <BountyCard prize={prize} isNight={isNight} />
-          </motion.div>
+          <BountyCard key={prize.name} prize={prize} index={index} />
         ))}
       </div>
     </motion.div>

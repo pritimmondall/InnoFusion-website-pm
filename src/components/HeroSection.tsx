@@ -111,7 +111,7 @@ const HeroSection = ({ onFindMatch }: HeroSectionProps) => {
           {/* ── Glass pill badge ── */}
           <motion.div
             initial={{ scale: 0, y: -20 }}
-            animate={{ scale: 1, y: 0 }}
+            animate={{ scale: 1, y: -28 }}
             transition={{ delay: 0.3, type: "spring" }}
             className="inline-flex items-center gap-3 mb-2 md:mb-3"
           >
@@ -126,7 +126,14 @@ const HeroSection = ({ onFindMatch }: HeroSectionProps) => {
                 width={320}
                 height={480}
               />
-              <span className="font-heading text-[10px] sm:text-xs md:text-sm lg:text-base tracking-widest whitespace-nowrap text-amber-100/90">
+              <span
+                className="font-heading font-bold text-xs sm:text-sm md:text-base lg:text-lg tracking-widest whitespace-nowrap"
+                style={{
+                  color: "#fff4d6",
+                  textShadow:
+                    "0 0 14px rgba(255,210,120,0.65), 0 0 28px rgba(255,180,60,0.35), 0 1px 3px rgba(0,0,0,0.8)",
+                }}
+              >
                 30-Hour India's Premier Software + Hardware Hackathon
               </span>
               <img
@@ -199,10 +206,11 @@ const HeroSection = ({ onFindMatch }: HeroSectionProps) => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.6 }}
-            className="font-body text-sm md:text-base max-w-xl mx-auto mb-4"
+            className="font-body font-semibold text-base sm:text-lg md:text-xl max-w-xl mx-auto mb-4"
             style={{
-              color: "rgba(210,210,200,0.7)",
-              textShadow: "0 2px 4px rgba(0,0,0,0.5)",
+              color: "rgba(238,238,230,0.92)",
+              textShadow:
+                "0 0 16px rgba(232,197,71,0.3), 0 2px 6px rgba(0,0,0,0.75)",
             }}
           >
             Clash with Codes, Conquer with Vision!~

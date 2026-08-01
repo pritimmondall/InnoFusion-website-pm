@@ -172,140 +172,227 @@ const ArcherQueenPopup = ({ isVisible, onClose }: { isVisible: boolean; onClose:
  * toggles state twice in the first two seconds, so the whole grid was torn
  * down and rebuilt twice on load. That was the lag.
  */
+function hexToRgba(hex: string, alpha: number): string {
+  const clean = hex.replace("#", "");
+  const r = parseInt(clean.slice(0, 2), 16);
+  const g = parseInt(clean.slice(2, 4), 16);
+  const b = parseInt(clean.slice(4, 6), 16);
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+
+/*
+ * Each section gets its own colour + COC troop badge, so a very long page
+ * (9 sections, 49 people) reads as distinct rosters at a glance instead of
+ * one repeating maroon block. Leadership stays gold-ringed regardless of
+ * team — gold reads as "leader" everywhere else on the site (Treasury,
+ * Sponsors), so keeping it universal here is what makes the ribbon legible.
+ */
+export interface TeamTheme {
+  accent: string;
+  troopIcon: string;
+  troopAlt: string;
+}
+
 const TeamCard = React.memo(
-  ({ member, index, isLead = false }: { member: TeamMember; index: number; isLead?: boolean }) => (
-    <motion.div
-      /* whileInView + once means off-screen cards never animate, and nothing
-         re-runs on scroll-back. Only transform/opacity are animated, so this
-         stays on the compositor. */
-      initial={{ opacity: 0, y: 28 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, margin: "-60px" }}
-      transition={{ delay: Math.min(index, 6) * 0.06, duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
-      className="clan-card group relative w-72 flex"
-    >
-      {/* Glass card face — ~70% transparent, page shows through */}
-      <div
-        className="relative flex flex-col w-full rounded-2xl overflow-hidden"
-        style={{
-          background:
-            "linear-gradient(to bottom, rgba(127,29,29,0.30), rgba(69,10,10,0.26) 55%, rgba(10,10,12,0.30))",
-          border: "2px solid rgba(234,179,8,0.55)",
-          backdropFilter: "blur(14px)",
-          WebkitBackdropFilter: "blur(14px)",
-          boxShadow: "0 10px 30px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,215,0,0.12)",
-        }}
+  ({
+    member,
+    index,
+    isLead = false,
+    theme,
+  }: {
+    member: TeamMember;
+    index: number;
+    isLead?: boolean;
+    theme: TeamTheme;
+  }) => {
+    const { accent, troopIcon, troopAlt } = theme;
+
+    return (
+      <motion.div
+        /* whileInView + once means off-screen cards never animate, and nothing
+           re-runs on scroll-back. Only transform/opacity are animated, so this
+           stays on the compositor. */
+        initial={{ opacity: 0, y: 28 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, margin: "-60px" }}
+        transition={{ delay: Math.min(index, 6) * 0.06, duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+        className="clan-card group relative w-72 flex"
+        style={
+          {
+            "--accent": accent,
+            "--accent-glow": hexToRgba(accent, 0.32),
+          } as React.CSSProperties
+        }
       >
-        {/* Diagonal weave texture, kept very faint over glass */}
+        {/* Glass card face — dark base tinted with the team's accent colour,
+            same diagonal-gradient language as Treasury / Special Bounties. */}
         <div
-          className="absolute inset-0 opacity-[0.10] pointer-events-none"
+          className="relative flex flex-col w-full rounded-2xl overflow-hidden"
           style={{
-            backgroundImage:
-              "repeating-linear-gradient(45deg, transparent, transparent 2px, rgba(0,0,0,0.35) 2px, rgba(0,0,0,0.35) 4px)",
+            background: `linear-gradient(165deg, ${hexToRgba(accent, 0.22)} 0%, rgba(255,255,255,0.03) 42%, rgba(10,10,12,0.6) 100%)`,
+            border: `2px solid ${hexToRgba(accent, isLead ? 0.75 : 0.5)}`,
+            backdropFilter: "blur(14px)",
+            WebkitBackdropFilter: "blur(14px)",
+            boxShadow: isLead
+              ? `0 10px 30px rgba(0,0,0,0.5), 0 0 24px ${hexToRgba(accent, 0.25)}, inset 0 1px 0 rgba(255,255,255,0.14)`
+              : "0 10px 30px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.08)",
           }}
-        />
-
-        {/* Leads get a soft gold wash. Static gradient, not an animation —
-            49 infinite loops was a meaningful part of the jank. */}
-        {isLead && (
-          <div className="absolute inset-0 pointer-events-none bg-gradient-to-t from-yellow-500/15 via-transparent to-yellow-500/10" />
-        )}
-
-        {/* Crown */}
-        <div className="relative z-10 flex justify-center pt-4">
-          <Crown
-            size={38}
-            className={isLead ? "text-yellow-400 drop-shadow-[0_0_10px_rgba(234,179,8,0.8)]" : "text-amber-500"}
-            fill={isLead ? "rgb(250 204 21)" : "rgb(245 158 11)"}
+        >
+          {/* Top colour wash */}
+          <div
+            className="absolute inset-x-0 top-0 h-2/3 pointer-events-none"
+            style={{ background: `radial-gradient(ellipse at 50% 0%, ${hexToRgba(accent, 0.24)} 0%, transparent 70%)` }}
           />
-        </div>
 
-        {/* Name — fixed two-line block so one- and two-line names align */}
-        <div className="relative z-10 pt-2 pb-3 px-3 flex items-center justify-center min-h-[3.9rem]">
-          <h3 className="font-display text-lg leading-tight text-center text-yellow-400 drop-shadow-[0_2px_4px_rgba(0,0,0,0.85)]">
-            {member.name}
-          </h3>
-        </div>
+          {/* Hover sheen sweep — CSS-driven, no per-frame JS */}
+          <div
+            className="clan-sheen absolute inset-0 pointer-events-none"
+            style={{
+              transform: "translateX(-130%)",
+              transition: "transform .7s ease",
+              background: `linear-gradient(115deg, transparent 35%, ${hexToRgba(accent, 0.2)} 48%, rgba(255,255,255,0.12) 52%, transparent 65%)`,
+            }}
+          />
 
-        {/* Avatar */}
-        <div className="relative z-10 flex justify-center pb-5">
-          <div className="relative">
-            {/* Static gold ring (was an infinite 360° rotation on every card) */}
+          {/* Lead ribbon — small cloth banner pinned to the top-left corner */}
+          {isLead && (
             <div
-              className="absolute -inset-2 rounded-full"
+              className="absolute -left-1 top-4 z-20 flex items-center gap-1 pl-3 pr-2.5 py-1 pointer-events-none"
               style={{
-                background: isLead
-                  ? "conic-gradient(from 0deg, #facc15, #f59e0b, #fde68a, #f59e0b, #facc15)"
-                  : "conic-gradient(from 0deg, #b45309, #ca8a04, #f59e0b, #ca8a04, #b45309)",
+                background: "linear-gradient(90deg, #a16207, #eab308)",
+                clipPath: "polygon(0 0, 100% 0, 92% 50%, 100% 100%, 0 100%)",
+                boxShadow: "0 3px 8px rgba(0,0,0,0.5)",
               }}
-            />
-            <div className="relative w-28 h-28 rounded-full border-4 border-black/80 overflow-hidden bg-gray-900">
+            >
+              <Crown size={11} className="text-yellow-950" fill="currentColor" />
+              <span className="font-display text-[9px] tracking-widest text-yellow-950">LEAD</span>
+            </div>
+          )}
+
+          {/* Troop badge — replaces the old universal crown with a COC troop
+              matched to the team, so the icon itself signals which roster
+              this card belongs to. */}
+          <div className="relative z-10 flex justify-center pt-4">
+            <div className="clan-troop-badge relative w-14 h-14 flex items-center justify-center">
+              <div
+                className="absolute inset-[-6px] rounded-full pointer-events-none"
+                style={{ background: `radial-gradient(circle, ${hexToRgba(accent, 0.4)} 0%, transparent 70%)`, filter: "blur(6px)" }}
+              />
               <img
-                src={member.image}
-                alt={member.name}
-                width={112}
-                height={112}
+                src={troopIcon}
+                alt={troopAlt}
                 loading="lazy"
                 decoding="async"
-                className="w-full h-full object-cover"
-                onError={(e) => {
-                  (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${encodeURIComponent(
-                    member.name
-                  )}&background=7c2d12&color=fbbf24&size=128&bold=true`;
-                }}
+                className="relative w-full h-full object-contain"
+                style={{ filter: `drop-shadow(0 2px 6px rgba(0,0,0,0.6)) drop-shadow(0 0 8px ${hexToRgba(accent, 0.5)})` }}
               />
             </div>
           </div>
-        </div>
 
-        {/* Role — fixed height so the button below always lines up */}
-        <div className="relative z-10 px-4 pb-4">
-          <div
-            className="flex items-center justify-center text-center py-2.5 px-3 rounded-lg min-h-[3rem]"
-            style={{
-              background: isLead
-                ? "linear-gradient(90deg, rgba(202,138,4,0.28), rgba(234,179,8,0.34), rgba(202,138,4,0.28))"
-                : "linear-gradient(90deg, rgba(180,83,9,0.24), rgba(217,119,6,0.30), rgba(180,83,9,0.24))",
-              border: "1px solid rgba(234,179,8,0.3)",
-            }}
-          >
-            <span className="font-body font-bold text-white text-sm tracking-wide leading-snug">
-              {member.role}
-            </span>
+          {/* Name — fixed two-line block so one- and two-line names align */}
+          <div className="relative z-10 pt-2 pb-3 px-3 flex items-center justify-center min-h-[3.9rem]">
+            <h3 className="font-display text-lg leading-tight text-center text-yellow-400 drop-shadow-[0_2px_4px_rgba(0,0,0,0.85)]">
+              {member.name}
+            </h3>
           </div>
-        </div>
 
-        {/* Connect — mt-auto pins it to the bottom, and the slot is always
-            rendered so members without a LinkedIn don't shrink their card */}
-        <div className="relative z-10 mt-auto px-4 pb-4">
-          {member.linkedin ? (
-            <button
-              type="button"
-              onClick={() => window.open(member.linkedin, "_blank", "noopener,noreferrer")}
-              className="clan-connect flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg w-full cursor-pointer transition-colors"
+          {/* Avatar */}
+          <div className="relative z-10 flex justify-center pb-5">
+            <div className={`relative ${isLead ? "w-32 h-32" : "w-28 h-28"}`}>
+              {/* Static ring (was an infinite 360° rotation on every card).
+                  Leads always get gold — that's the leadership signal;
+                  everyone else's ring reflects their team's colour. */}
+              <div
+                className="absolute -inset-2 rounded-full"
+                style={{
+                  background: isLead
+                    ? "conic-gradient(from 0deg, #facc15, #f59e0b, #fde68a, #f59e0b, #facc15)"
+                    : `conic-gradient(from 0deg, ${hexToRgba(accent, 0.9)}, ${hexToRgba(accent, 0.55)}, ${hexToRgba(accent, 0.9)})`,
+                }}
+              />
+              <div className="relative w-full h-full rounded-full border-4 border-black/80 overflow-hidden bg-gray-900">
+                <img
+                  src={member.image}
+                  alt={member.name}
+                  width={128}
+                  height={128}
+                  loading="lazy"
+                  decoding="async"
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${encodeURIComponent(
+                      member.name
+                    )}&background=7c2d12&color=fbbf24&size=128&bold=true`;
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Role — fixed height so the button below always lines up */}
+          <div className="relative z-10 px-4 pb-4">
+            <div
+              className="flex items-center justify-center text-center py-2.5 px-3 rounded-lg min-h-[3rem]"
               style={{
-                background: "linear-gradient(90deg, rgba(37,99,235,0.75), rgba(29,78,216,0.75))",
-                border: "1px solid rgba(96,165,250,0.45)",
+                background: `linear-gradient(90deg, ${hexToRgba(accent, 0.2)}, ${hexToRgba(accent, 0.3)}, ${hexToRgba(accent, 0.2)})`,
+                border: `1px solid ${hexToRgba(accent, 0.35)}`,
               }}
             >
-              <Linkedin className="w-4 h-4 text-white" />
-              <span className="text-white text-sm font-bold">Connect</span>
-            </button>
-          ) : (
-            <div className="h-[42px]" aria-hidden="true" />
-          )}
-        </div>
+              <span className="font-body font-bold text-white text-sm tracking-wide leading-snug">
+                {member.role}
+              </span>
+            </div>
+          </div>
 
-        {/* Corner brackets */}
-        <div className="absolute top-2 left-2 w-4 h-4 border-t-2 border-l-2 border-yellow-500/50 rounded-tl pointer-events-none" />
-        <div className="absolute top-2 right-2 w-4 h-4 border-t-2 border-r-2 border-yellow-500/50 rounded-tr pointer-events-none" />
-        <div className="absolute bottom-2 left-2 w-4 h-4 border-b-2 border-l-2 border-yellow-500/50 rounded-bl pointer-events-none" />
-        <div className="absolute bottom-2 right-2 w-4 h-4 border-b-2 border-r-2 border-yellow-500/50 rounded-br pointer-events-none" />
-      </div>
-    </motion.div>
-  )
+          {/* Connect — mt-auto pins it to the bottom, and the slot is always
+              rendered so members without a LinkedIn don't shrink their card */}
+          <div className="relative z-10 mt-auto px-4 pb-4">
+            {member.linkedin ? (
+              <button
+                type="button"
+                onClick={() => window.open(member.linkedin, "_blank", "noopener,noreferrer")}
+                className="clan-connect flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg w-full cursor-pointer transition-colors"
+                style={{
+                  background: "linear-gradient(90deg, rgba(37,99,235,0.75), rgba(29,78,216,0.75))",
+                  border: "1px solid rgba(96,165,250,0.45)",
+                }}
+              >
+                <Linkedin className="w-4 h-4 text-white" />
+                <span className="text-white text-sm font-bold">Connect</span>
+              </button>
+            ) : (
+              <div className="h-[42px]" aria-hidden="true" />
+            )}
+          </div>
+
+          {/* Corner brackets, tinted to match the team */}
+          <div className="absolute top-2 left-2 w-4 h-4 border-t-2 border-l-2 rounded-tl pointer-events-none" style={{ borderColor: hexToRgba(accent, 0.55) }} />
+          <div className="absolute top-2 right-2 w-4 h-4 border-t-2 border-r-2 rounded-tr pointer-events-none" style={{ borderColor: hexToRgba(accent, 0.55) }} />
+          <div className="absolute bottom-2 left-2 w-4 h-4 border-b-2 border-l-2 rounded-bl pointer-events-none" style={{ borderColor: hexToRgba(accent, 0.55) }} />
+          <div className="absolute bottom-2 right-2 w-4 h-4 border-b-2 border-r-2 rounded-br pointer-events-none" style={{ borderColor: hexToRgba(accent, 0.55) }} />
+        </div>
+      </motion.div>
+    );
+  }
 );
 TeamCard.displayName = "TeamCard";
+
+/*
+ * One theme per section. Troop choices lean on the character art already
+ * imported for the page's background gutters (CLAN_TROOPS below), so no new
+ * assets are needed — just a different pairing of colour + troop per team.
+ */
+const TEAM_THEMES: Record<string, TeamTheme> = {
+  organizers:  { accent: "#eab308", troopIcon: "/characters/track-warden.png",     troopAlt: "Grand Warden" },
+  webdev:      { accent: "#3b82f6", troopIcon: "/characters/track-pekka.png",      troopAlt: "P.E.K.K.A" },
+  core:        { accent: "#f59e0b", troopIcon: "/characters/track-barbarian.png",  troopAlt: "Barbarian" },
+  graphics:    { accent: "#a855f7", troopIcon: "/characters/track-nightwitch.png", troopAlt: "Night Witch" },
+  branding:    { accent: "#f97316", troopIcon: "/characters/track-wizard.png",     troopAlt: "Wizard" },
+  pr:          { accent: "#ec4899", troopIcon: "/characters/track-archer.png",     troopAlt: "Archer" },
+  decoration:  { accent: "#10b981", troopIcon: "/characters/coc-builder.png",      troopAlt: "Builder" },
+  coordinator: { accent: "#06b6d4", troopIcon: "/characters/coc-wallbreaker.png",  troopAlt: "Wall Breaker" },
+  executive:   { accent: "#f43f5e", troopIcon: "/characters/track-king.png",       troopAlt: "Barbarian King" },
+};
 
 /* Decorative troops drifting in the page gutters. Float only, no rotation. */
 const CLAN_TROOPS = [
@@ -693,6 +780,11 @@ const ClanLeaders = () => {
         card; a class swap with a GPU transform costs nothing.
       */}
       <style>{`
+        /*
+          --accent is set per-card (inline style on .clan-card), so this one
+          hover rule automatically picks up each team's colour instead of
+          needing a separate rule per section.
+        */
         .clan-card { will-change: transform; }
         .clan-card > div {
           transition: transform .28s cubic-bezier(.22,1,.36,1),
@@ -701,14 +793,24 @@ const ClanLeaders = () => {
         }
         .clan-card:hover > div {
           transform: translateY(-8px) scale(1.03);
-          border-color: rgba(250,204,21,0.9);
-          box-shadow: 0 22px 44px rgba(0,0,0,0.6), 0 0 34px rgba(234,179,8,0.28),
-                      inset 0 1px 0 rgba(255,215,0,0.2);
+          border-color: var(--accent, rgba(250,204,21,0.9));
+          box-shadow: 0 22px 44px rgba(0,0,0,0.6),
+                      0 0 34px var(--accent-glow, rgba(234,179,8,0.28)),
+                      inset 0 1px 0 rgba(255,255,255,0.16);
+        }
+        .clan-card:hover .clan-sheen { transform: translateX(130%); }
+        .clan-troop-badge {
+          animation: clanFloat 3.2s ease-in-out infinite;
+        }
+        @keyframes clanFloat {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-5px); }
         }
         .clan-connect:hover { filter: brightness(1.18); }
         .clan-connect:active { transform: scale(.97); }
         @media (prefers-reduced-motion: reduce) {
           .clan-card > div { transition: none; }
+          .clan-troop-badge { animation: none; }
         }
       `}</style>
 
@@ -792,13 +894,18 @@ const ClanLeaders = () => {
           transition={{ delay: 0.4 }}
         >
           <div className="text-center mb-10">
-            <h2 className="font-display text-3xl text-yellow-400 mb-2">Organizers</h2>
+            <h2
+              className="font-display text-3xl mb-2"
+              style={{ color: TEAM_THEMES.organizers.accent, textShadow: `0 0 18px ${hexToRgba(TEAM_THEMES.organizers.accent, 0.4)}` }}
+            >
+              Organizers
+            </h2>
           </div>
 
           <div className="flex flex-wrap justify-center gap-8">
-            <TeamCard member={leadOrganizer} index={0} isLead={true} />
+            <TeamCard member={leadOrganizer} index={0} isLead={true} theme={TEAM_THEMES.organizers} />
             {coOrganizers.map((member, index) => (
-              <TeamCard key={member.name} member={member} index={index + 1} />
+              <TeamCard key={member.name} member={member} index={index + 1} theme={TEAM_THEMES.organizers} />
             ))}
           </div>
         </motion.div>
@@ -806,8 +913,13 @@ const ClanLeaders = () => {
         {webDevelopmentTeam.length > 0 && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }} className="mt-16">
             <div className="text-center mb-10">
-              <h2 className="font-display text-3xl text-yellow-400 mb-2">Developer Team</h2>
-              <div className="mx-auto w-64 h-0.5 bg-gradient-to-r from-transparent via-yellow-500 to-transparent" />
+              <h2
+                className="font-display text-3xl mb-2"
+                style={{ color: TEAM_THEMES.webdev.accent, textShadow: `0 0 18px ${hexToRgba(TEAM_THEMES.webdev.accent, 0.4)}` }}
+              >
+                Developer Team
+              </h2>
+              <div className="mx-auto w-64 h-0.5" style={{ background: `linear-gradient(90deg, transparent, ${TEAM_THEMES.webdev.accent}, transparent)` }} />
             </div>
             <div className="flex flex-wrap justify-center gap-8">
               {webDevelopmentTeam.map((member, index) => (
@@ -816,6 +928,7 @@ const ClanLeaders = () => {
                   member={member}
                   index={index}
                   isLead={member.role.toLowerCase().includes("lead")}
+                  theme={TEAM_THEMES.webdev}
                 />
               ))}
             </div>
@@ -827,8 +940,13 @@ const ClanLeaders = () => {
         {coreTeam.length > 0 && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }} className="mt-16">
             <div className="text-center mb-10">
-              <h2 className="font-display text-3xl text-yellow-400 mb-2">Core Team</h2>
-              <div className="mx-auto w-64 h-0.5 bg-gradient-to-r from-transparent via-yellow-500 to-transparent" />
+              <h2
+                className="font-display text-3xl mb-2"
+                style={{ color: TEAM_THEMES.core.accent, textShadow: `0 0 18px ${hexToRgba(TEAM_THEMES.core.accent, 0.4)}` }}
+              >
+                Core Team
+              </h2>
+              <div className="mx-auto w-64 h-0.5" style={{ background: `linear-gradient(90deg, transparent, ${TEAM_THEMES.core.accent}, transparent)` }} />
             </div>
             <div className="flex flex-wrap justify-center gap-8">
               {coreTeam.map((member, index) => (
@@ -837,6 +955,7 @@ const ClanLeaders = () => {
                   member={member}
                   index={index}
                   isLead={member.role.toLowerCase().includes("lead")}
+                  theme={TEAM_THEMES.core}
                 />
               ))}
             </div>
@@ -847,8 +966,13 @@ const ClanLeaders = () => {
         {graphicsTeam.length > 0 && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.55 }} className="mt-16">
             <div className="text-center mb-10">
-              <h2 className="font-display text-3xl text-yellow-400 mb-2">Graphics Team</h2>
-              <div className="mx-auto w-64 h-0.5 bg-gradient-to-r from-transparent via-yellow-500 to-transparent" />
+              <h2
+                className="font-display text-3xl mb-2"
+                style={{ color: TEAM_THEMES.graphics.accent, textShadow: `0 0 18px ${hexToRgba(TEAM_THEMES.graphics.accent, 0.4)}` }}
+              >
+                Graphics Team
+              </h2>
+              <div className="mx-auto w-64 h-0.5" style={{ background: `linear-gradient(90deg, transparent, ${TEAM_THEMES.graphics.accent}, transparent)` }} />
             </div>
             <div className="flex flex-wrap justify-center gap-8">
               {graphicsTeam.map((member, index) => (
@@ -857,6 +981,7 @@ const ClanLeaders = () => {
                   member={member}
                   index={index}
                   isLead={member.role.toLowerCase().includes("lead")}
+                  theme={TEAM_THEMES.graphics}
                 />
               ))}
             </div>
@@ -867,8 +992,13 @@ const ClanLeaders = () => {
         {marketingTeam.length > 0 && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.6 }} className="mt-16">
             <div className="text-center mb-10">
-              <h2 className="font-display text-3xl text-yellow-400 mb-2">Branding Team</h2>
-              <div className="mx-auto w-64 h-0.5 bg-gradient-to-r from-transparent via-yellow-500 to-transparent" />
+              <h2
+                className="font-display text-3xl mb-2"
+                style={{ color: TEAM_THEMES.branding.accent, textShadow: `0 0 18px ${hexToRgba(TEAM_THEMES.branding.accent, 0.4)}` }}
+              >
+                Branding Team
+              </h2>
+              <div className="mx-auto w-64 h-0.5" style={{ background: `linear-gradient(90deg, transparent, ${TEAM_THEMES.branding.accent}, transparent)` }} />
             </div>
             <div className="flex flex-wrap justify-center gap-8">
               {marketingTeam.map((member, index) => (
@@ -877,6 +1007,7 @@ const ClanLeaders = () => {
                   member={member}
                   index={index}
                   isLead={member.role.toLowerCase().includes("lead")}
+                  theme={TEAM_THEMES.branding}
                 />
               ))}
             </div>
@@ -887,8 +1018,13 @@ const ClanLeaders = () => {
         {socialMediaTeam.length > 0 && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.65 }} className="mt-16">
             <div className="text-center mb-10">
-              <h2 className="font-display text-3xl text-yellow-400 mb-2">Public Relations Team</h2>
-              <div className="mx-auto w-64 h-0.5 bg-gradient-to-r from-transparent via-yellow-500 to-transparent" />
+              <h2
+                className="font-display text-3xl mb-2"
+                style={{ color: TEAM_THEMES.pr.accent, textShadow: `0 0 18px ${hexToRgba(TEAM_THEMES.pr.accent, 0.4)}` }}
+              >
+                Public Relations Team
+              </h2>
+              <div className="mx-auto w-64 h-0.5" style={{ background: `linear-gradient(90deg, transparent, ${TEAM_THEMES.pr.accent}, transparent)` }} />
             </div>
             <div className="flex flex-wrap justify-center gap-8">
               {socialMediaTeam.map((member, index) => (
@@ -897,6 +1033,7 @@ const ClanLeaders = () => {
                   member={member}
                   index={index}
                   isLead={member.role.toLowerCase().includes("lead")}
+                  theme={TEAM_THEMES.pr}
                 />
               ))}
             </div>
@@ -907,8 +1044,13 @@ const ClanLeaders = () => {
         {decorationTeam.length > 0 && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.7 }} className="mt-16">
             <div className="text-center mb-10">
-              <h2 className="font-display text-3xl text-yellow-400 mb-2">Decoration Team</h2>
-              <div className="mx-auto w-64 h-0.5 bg-gradient-to-r from-transparent via-yellow-500 to-transparent" />
+              <h2
+                className="font-display text-3xl mb-2"
+                style={{ color: TEAM_THEMES.decoration.accent, textShadow: `0 0 18px ${hexToRgba(TEAM_THEMES.decoration.accent, 0.4)}` }}
+              >
+                Decoration Team
+              </h2>
+              <div className="mx-auto w-64 h-0.5" style={{ background: `linear-gradient(90deg, transparent, ${TEAM_THEMES.decoration.accent}, transparent)` }} />
             </div>
             <div className="flex flex-wrap justify-center gap-8">
               {decorationTeam.map((member, index) => (
@@ -917,6 +1059,7 @@ const ClanLeaders = () => {
                   member={member}
                   index={index}
                   isLead={member.role.toLowerCase().includes("lead")}
+                  theme={TEAM_THEMES.decoration}
                 />
               ))}
             </div>
@@ -927,8 +1070,13 @@ const ClanLeaders = () => {
         {coordinatorTeam.length > 0 && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.75 }} className="mt-16">
             <div className="text-center mb-10">
-              <h2 className="font-display text-3xl text-yellow-400 mb-2">Coordinator Team</h2>
-              <div className="mx-auto w-64 h-0.5 bg-gradient-to-r from-transparent via-yellow-500 to-transparent" />
+              <h2
+                className="font-display text-3xl mb-2"
+                style={{ color: TEAM_THEMES.coordinator.accent, textShadow: `0 0 18px ${hexToRgba(TEAM_THEMES.coordinator.accent, 0.4)}` }}
+              >
+                Coordinator Team
+              </h2>
+              <div className="mx-auto w-64 h-0.5" style={{ background: `linear-gradient(90deg, transparent, ${TEAM_THEMES.coordinator.accent}, transparent)` }} />
             </div>
             <div className="flex flex-wrap justify-center gap-8">
               {coordinatorTeam.map((member, index) => (
@@ -937,6 +1085,7 @@ const ClanLeaders = () => {
                   member={member}
                   index={index}
                   isLead={member.role.toLowerCase().includes("lead")}
+                  theme={TEAM_THEMES.coordinator}
                 />
               ))}
             </div>
@@ -947,8 +1096,13 @@ const ClanLeaders = () => {
         {executiveTeam.length > 0 && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.8 }} className="mt-16">
             <div className="text-center mb-10">
-              <h2 className="font-display text-3xl text-yellow-400 mb-2">Executive Team</h2>
-              <div className="mx-auto w-64 h-0.5 bg-gradient-to-r from-transparent via-yellow-500 to-transparent" />
+              <h2
+                className="font-display text-3xl mb-2"
+                style={{ color: TEAM_THEMES.executive.accent, textShadow: `0 0 18px ${hexToRgba(TEAM_THEMES.executive.accent, 0.4)}` }}
+              >
+                Executive Team
+              </h2>
+              <div className="mx-auto w-64 h-0.5" style={{ background: `linear-gradient(90deg, transparent, ${TEAM_THEMES.executive.accent}, transparent)` }} />
             </div>
             <div className="flex flex-wrap justify-center gap-8">
               {executiveTeam.map((member, index) => (
@@ -957,6 +1111,7 @@ const ClanLeaders = () => {
                   member={member}
                   index={index}
                   isLead={member.role.toLowerCase().includes("lead")}
+                  theme={TEAM_THEMES.executive}
                 />
               ))}
             </div>

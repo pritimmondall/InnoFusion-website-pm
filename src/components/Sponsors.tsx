@@ -61,6 +61,7 @@ const NEEDS_LIGHT_PLATE = new Set([
   "LNC",
   "Diversion",
   "Wadhwani",
+  "Miro", // navy wordmark reads as near-black on the translucent card
 ]);
 
 /* Logos that ship as a full-bleed dark tile (their own opaque background).

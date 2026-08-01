@@ -87,10 +87,21 @@ const CHEST_CLOSED = "/chest-closed.png";
 const CHEST_OPEN = "/chest-open.png";
 const HAMMER = "/hammer.png";
 
-/* Swing timings (ms). Impact lands before the swing finishes so the hammer
-   still has a recoil to play out after the chest reacts. */
-const HAMMER_IMPACT = 300;
-const HAMMER_SWING = 480;
+/*
+ * Three strikes. Each blow is a full raise-and-swing; the hammer stays on
+ * screen for the whole combo and only leaves after the third hit, which is
+ * what triggers the chest to burst open.
+ */
+const BLOW_COUNT = 3;
+const BLOW_PERIOD = 420;   // one full raise + swing
+const BLOW_IMPACT = 260;   // contact point within a single blow
+const HAMMER_SWING = BLOW_PERIOD * BLOW_COUNT; // total combo length
+
+/* Absolute ms offsets of each impact from the start of the combo */
+const IMPACT_TIMES = Array.from(
+  { length: BLOW_COUNT },
+  (_, i) => i * BLOW_PERIOD + BLOW_IMPACT
+);
 
 /*
  * One shared, lazily created Audio element for the clang. Cloning it per hit
@@ -98,7 +109,7 @@ const HAMMER_SWING = 480;
  * we never construct 3 separate decoders up front.
  */
 let hammerAudio: HTMLAudioElement | null = null;
-const playHammerStrike = () => {
+const playHammerStrike = (volume = 0.6) => {
   if (typeof window === "undefined") return;
   try {
     if (!hammerAudio) {
@@ -106,7 +117,7 @@ const playHammerStrike = () => {
       hammerAudio.preload = "auto";
     }
     const hit = hammerAudio.cloneNode() as HTMLAudioElement;
-    hit.volume = 0.85;
+    hit.volume = Math.min(1, Math.max(0, volume));
     void hit.play().catch(() => {});
   } catch {
     /* autoplay blocked — the visual still reads fine on its own */
@@ -162,37 +173,42 @@ const ChestCard = ({
    * idle → hammer → shaking → open
    *
    * The hammer phase is new: a warhammer swings in from the upper right and
-   * lands on the lid at HAMMER_IMPACT ms, which is when the clang plays and
-   * the chest takes the hit. Everything after impact is unchanged.
+   * lands three blows on the lid at the offsets in IMPACT_TIMES. Each contact
+   * fires the clang, a flash and a squash. Everything after the third blow is
+   * unchanged.
    */
   const [phase, setPhase] = useState<"idle" | "hammer" | "shaking" | "open">("idle");
-  const [struck, setStruck] = useState(false);
+  /* 0 = no hit yet; 1..3 = which blow just landed. Doubles as the key that
+     restarts the impact burst so all three hits are visibly distinct. */
+  const [hitCount, setHitCount] = useState(0);
 
   useEffect(() => {
     if (isOpen && phase === "idle") {
       setPhase("hammer");
-      setStruck(false);
-      const tHit = setTimeout(() => {
-        setStruck(true);
-        playHammerStrike();
-      }, HAMMER_IMPACT);
-      const tShake = setTimeout(() => setPhase("shaking"), HAMMER_SWING);
-      const tOpen = setTimeout(() => setPhase("open"), HAMMER_SWING + 700);
-      return () => {
-        clearTimeout(tHit);
-        clearTimeout(tShake);
-        clearTimeout(tOpen);
-      };
+      setHitCount(0);
+
+      const timers = IMPACT_TIMES.map((at, i) =>
+        setTimeout(() => {
+          setHitCount(i + 1);
+          /* Each blow lands a little harder than the last */
+          playHammerStrike(0.5 + i * 0.1);
+        }, at)
+      );
+      timers.push(setTimeout(() => setPhase("shaking"), HAMMER_SWING));
+      timers.push(setTimeout(() => setPhase("open"), HAMMER_SWING + 700));
+
+      return () => timers.forEach(clearTimeout);
     }
     if (!isOpen && phase !== "idle") {
       setPhase("idle");
-      setStruck(false);
+      setHitCount(0);
     }
   }, [isOpen]);
 
   const opened = phase === "open";
   const shaking = phase === "shaking";
   const hammering = phase === "hammer";
+  const struck = hitCount > 0;
   const glow = prize.chestGlow;
   const burst = prize.burstColor;
 
@@ -402,28 +418,47 @@ const ChestCard = ({
               aria-hidden="true"
               className="absolute z-30 pointer-events-none object-contain"
               style={{
-                width: 130,
-                height: 130,
+                width: 300,
+                height: 300,
                 left: "50%",
                 top: "50%",
                 /* Pivot at the bottom of the handle so it arcs like a swing
                    instead of spinning about its centre. */
-                transformOrigin: "20% 90%",
-                filter: "drop-shadow(0 6px 14px rgba(0,0,0,0.65))",
+                transformOrigin: "20% 92%",
+                filter: "drop-shadow(0 10px 24px rgba(0,0,0,0.75))",
               }}
-              initial={{ x: 70, y: -140, rotate: -95, opacity: 0, scale: 0.85 }}
+              initial={{ x: 140, y: -250, rotate: -102, opacity: 0, scale: 0.9 }}
+              /*
+                Three raise-and-strike cycles on one keyframe track. Each cycle
+                is wind-up → drive down to contact → recoil, and the `times`
+                below place every contact frame exactly on IMPACT_TIMES so the
+                clang, the flash and the chest's squash all land together.
+                The last keyframe carries the hammer up and out so it doesn't
+                sit on top of the burst.
+              */
               animate={{
-                x: [70, 20, 6, 30],
-                y: [-140, -60, -18, -70],
-                rotate: [-95, -30, 22, -55],
-                opacity: [0, 1, 1, 0],
-                scale: [0.85, 1.05, 1.1, 0.9],
+                x: [140, 46, 4, 58, 46, 4, 58, 46, 0, 120],
+                y: [-250, -120, -40, -140, -120, -40, -140, -120, -46, -230],
+                rotate: [-102, -40, 24, -62, -40, 24, -62, -40, 28, -100],
+                scale: [0.9, 1.02, 1.1, 0.98, 1.02, 1.12, 0.98, 1.02, 1.16, 0.9],
+                opacity: [0, 1, 1, 1, 1, 1, 1, 1, 1, 0],
               }}
-              exit={{ opacity: 0 }}
+              exit={{ opacity: 0, transition: { duration: 0.15 } }}
               transition={{
                 duration: HAMMER_SWING / 1000,
-                times: [0, 0.45, HAMMER_IMPACT / HAMMER_SWING, 1],
-                ease: ["easeIn", "easeIn", "easeOut"],
+                times: [
+                  0,
+                  (BLOW_PERIOD * 0.55) / HAMMER_SWING,
+                  IMPACT_TIMES[0] / HAMMER_SWING,
+                  (BLOW_PERIOD * 1) / HAMMER_SWING,
+                  (BLOW_PERIOD * 1.55) / HAMMER_SWING,
+                  IMPACT_TIMES[1] / HAMMER_SWING,
+                  (BLOW_PERIOD * 2) / HAMMER_SWING,
+                  (BLOW_PERIOD * 2.55) / HAMMER_SWING,
+                  IMPACT_TIMES[2] / HAMMER_SWING,
+                  1,
+                ],
+                ease: "easeInOut",
               }}
             />
           )}
@@ -433,7 +468,9 @@ const ChestCard = ({
         <AnimatePresence>
           {struck && phase !== "open" && (
             <motion.div
-              key="impact"
+              /* Keying on hitCount remounts the whole burst on every blow, so
+                 all three impacts flash rather than only the first. */
+              key={`impact-${hitCount}`}
               className="absolute inset-0 z-20 pointer-events-none flex items-center justify-center"
               initial={{ opacity: 1 }}
               exit={{ opacity: 0 }}
@@ -481,13 +518,21 @@ const ChestCard = ({
 
         {/* ── The chest sprite itself ── */}
         <motion.div
+          /* Remount on each blow so the squash replays all three times */
+          key={hammering ? `chest-hit-${hitCount}` : "chest"}
           className="relative z-10"
           animate={
             hammering
               ? struck
-                ? /* Took the hit: squash down and rebound */
-                  { x: 0, y: [0, 12, 0], rotate: 0, scaleY: [1, 0.82, 1.04, 1], scaleX: [1, 1.16, 0.98, 1] }
-                : /* Bracing before the blow */
+                ? /* Took the hit: squash down and rebound, harder each time */
+                  {
+                    x: 0,
+                    y: [0, 10 + hitCount * 3, 0],
+                    rotate: 0,
+                    scaleY: [1, 0.86 - hitCount * 0.03, 1.05, 1],
+                    scaleX: [1, 1.12 + hitCount * 0.03, 0.98, 1],
+                  }
+                : /* Bracing before the first blow */
                   { x: 0, y: 0, rotate: 0, scale: 1 }
               : shaking
               ? {

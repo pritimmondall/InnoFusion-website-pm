@@ -29,6 +29,17 @@ interface ScrollAnimationProps {
   duration?: number;
   className?: string;
   stagger?: number;
+  /**
+   * ScrollTrigger `start` position. Defaults to 'top 88%' (fires once the
+   * element is 12% into the viewport). Sections with a background that has
+   * to colour-match its neighbours (e.g. WarMap's cavern gradient) can pass
+   * an earlier value like 'top bottom+=500' so the fade-in finishes before
+   * the section is actually on screen — otherwise a fast scroll or a
+   * scroll-behavior:smooth jump can catch it mid-fade, and the still-
+   * fading-in background reads as a hard edge against its neighbour for a
+   * moment before it settles.
+   */
+  start?: string;
 }
 
 const FROM: Record<Animation, gsap.TweenVars> = {
@@ -50,6 +61,7 @@ const ScrollAnimation = memo(({
   duration = 0.55,
   className = '',
   stagger = 0,
+  start = 'top 88%',
 }: ScrollAnimationProps) => {
   const elementRef = useRef<HTMLDivElement>(null);
 
@@ -86,7 +98,7 @@ const ScrollAnimation = memo(({
         onComplete: () => gsap.set(targets, { clearProps: 'willChange' }),
         scrollTrigger: {
           trigger: element,
-          start: 'top 88%',
+          start,
           once: true,
           fastScrollEnd: true,
         },
@@ -95,7 +107,7 @@ const ScrollAnimation = memo(({
 
     // gsap.context scopes cleanup to this component's own tweens and triggers.
     return () => ctx.revert();
-  }, [animation, delay, duration, stagger]);
+  }, [animation, delay, duration, stagger, start]);
 
   return (
     <div ref={elementRef} className={className}>
