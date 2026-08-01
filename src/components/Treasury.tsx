@@ -85,6 +85,33 @@ const trackPrizes = [
 
 const CHEST_CLOSED = "/chest-closed.png";
 const CHEST_OPEN = "/chest-open.png";
+const HAMMER = "/hammer.png";
+
+/* Swing timings (ms). Impact lands before the swing finishes so the hammer
+   still has a recoil to play out after the chest reacts. */
+const HAMMER_IMPACT = 300;
+const HAMMER_SWING = 480;
+
+/*
+ * One shared, lazily created Audio element for the clang. Cloning it per hit
+ * means overlapping strikes on different chests don't cut each other off, and
+ * we never construct 3 separate decoders up front.
+ */
+let hammerAudio: HTMLAudioElement | null = null;
+const playHammerStrike = () => {
+  if (typeof window === "undefined") return;
+  try {
+    if (!hammerAudio) {
+      hammerAudio = new Audio("/hammer-strike.mp3");
+      hammerAudio.preload = "auto";
+    }
+    const hit = hammerAudio.cloneNode() as HTMLAudioElement;
+    hit.volume = 0.85;
+    void hit.play().catch(() => {});
+  } catch {
+    /* autoplay blocked — the visual still reads fine on its own */
+  }
+};
 
 /* Deterministic particle tables so re-renders don't reshuffle them */
 const BURST_SPARKS = Array.from({ length: 30 }, (_, i) => {
@@ -131,19 +158,41 @@ const ChestCard = ({
   onOpen: () => void;
   isNight: boolean;
 }) => {
-  const [phase, setPhase] = useState<"idle" | "shaking" | "open">("idle");
+  /*
+   * idle → hammer → shaking → open
+   *
+   * The hammer phase is new: a warhammer swings in from the upper right and
+   * lands on the lid at HAMMER_IMPACT ms, which is when the clang plays and
+   * the chest takes the hit. Everything after impact is unchanged.
+   */
+  const [phase, setPhase] = useState<"idle" | "hammer" | "shaking" | "open">("idle");
+  const [struck, setStruck] = useState(false);
 
   useEffect(() => {
     if (isOpen && phase === "idle") {
-      setPhase("shaking");
-      const t = setTimeout(() => setPhase("open"), 700);
-      return () => clearTimeout(t);
+      setPhase("hammer");
+      setStruck(false);
+      const tHit = setTimeout(() => {
+        setStruck(true);
+        playHammerStrike();
+      }, HAMMER_IMPACT);
+      const tShake = setTimeout(() => setPhase("shaking"), HAMMER_SWING);
+      const tOpen = setTimeout(() => setPhase("open"), HAMMER_SWING + 700);
+      return () => {
+        clearTimeout(tHit);
+        clearTimeout(tShake);
+        clearTimeout(tOpen);
+      };
     }
-    if (!isOpen && phase !== "idle") setPhase("idle");
+    if (!isOpen && phase !== "idle") {
+      setPhase("idle");
+      setStruck(false);
+    }
   }, [isOpen]);
 
   const opened = phase === "open";
   const shaking = phase === "shaking";
+  const hammering = phase === "hammer";
   const glow = prize.chestGlow;
   const burst = prize.burstColor;
 
@@ -343,11 +392,104 @@ const ChestCard = ({
           )}
         </AnimatePresence>
 
+        {/* ── Warhammer swing ── */}
+        <AnimatePresence>
+          {hammering && (
+            <motion.img
+              key="hammer"
+              src={HAMMER}
+              alt=""
+              aria-hidden="true"
+              className="absolute z-30 pointer-events-none object-contain"
+              style={{
+                width: 130,
+                height: 130,
+                left: "50%",
+                top: "50%",
+                /* Pivot at the bottom of the handle so it arcs like a swing
+                   instead of spinning about its centre. */
+                transformOrigin: "20% 90%",
+                filter: "drop-shadow(0 6px 14px rgba(0,0,0,0.65))",
+              }}
+              initial={{ x: 70, y: -140, rotate: -95, opacity: 0, scale: 0.85 }}
+              animate={{
+                x: [70, 20, 6, 30],
+                y: [-140, -60, -18, -70],
+                rotate: [-95, -30, 22, -55],
+                opacity: [0, 1, 1, 0],
+                scale: [0.85, 1.05, 1.1, 0.9],
+              }}
+              exit={{ opacity: 0 }}
+              transition={{
+                duration: HAMMER_SWING / 1000,
+                times: [0, 0.45, HAMMER_IMPACT / HAMMER_SWING, 1],
+                ease: ["easeIn", "easeIn", "easeOut"],
+              }}
+            />
+          )}
+        </AnimatePresence>
+
+        {/* ── Impact flash + shockwave at the moment of contact ── */}
+        <AnimatePresence>
+          {struck && phase !== "open" && (
+            <motion.div
+              key="impact"
+              className="absolute inset-0 z-20 pointer-events-none flex items-center justify-center"
+              initial={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+            >
+              {/* White flash at the strike point */}
+              <motion.div
+                className="absolute rounded-full"
+                style={{ width: 120, height: 120, background: "#fff", filter: "blur(18px)", top: "22%" }}
+                initial={{ scale: 0.2, opacity: 0.95 }}
+                animate={{ scale: 1.8, opacity: 0 }}
+                transition={{ duration: 0.35, ease: "easeOut" }}
+              />
+              {/* Expanding ring */}
+              <motion.div
+                className="absolute rounded-full"
+                style={{ width: 70, height: 70, border: `3px solid ${burst}`, top: "26%" }}
+                initial={{ scale: 0.3, opacity: 0.9 }}
+                animate={{ scale: 3.2, opacity: 0 }}
+                transition={{ duration: 0.45, ease: "easeOut" }}
+              />
+              {/* Impact sparks flying off the lid */}
+              {Array.from({ length: 10 }).map((_, i) => {
+                const a = -160 + i * 16;
+                const r = (a * Math.PI) / 180;
+                return (
+                  <motion.div
+                    key={i}
+                    className="absolute rounded-full"
+                    style={{
+                      top: "30%",
+                      width: 4,
+                      height: 4,
+                      background: i % 2 ? "#fff" : burst,
+                      boxShadow: `0 0 8px ${burst}`,
+                    }}
+                    initial={{ x: 0, y: 0, opacity: 1, scale: 1 }}
+                    animate={{ x: Math.cos(r) * 90, y: Math.sin(r) * 70, opacity: 0, scale: 0 }}
+                    transition={{ duration: 0.5, delay: i * 0.012, ease: "easeOut" }}
+                  />
+                );
+              })}
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {/* ── The chest sprite itself ── */}
         <motion.div
           className="relative z-10"
           animate={
-            shaking
+            hammering
+              ? struck
+                ? /* Took the hit: squash down and rebound */
+                  { x: 0, y: [0, 12, 0], rotate: 0, scaleY: [1, 0.82, 1.04, 1], scaleX: [1, 1.16, 0.98, 1] }
+                : /* Bracing before the blow */
+                  { x: 0, y: 0, rotate: 0, scale: 1 }
+              : shaking
               ? {
                   x: [0, -9, 11, -13, 10, -8, 13, -11, 7, -5, 0],
                   y: [0, -3, 4, -5, 3, -4, 6, -3, 4, -2, 0],
@@ -359,7 +501,9 @@ const ChestCard = ({
               : { x: 0, y: [0, -8, 0], rotate: [-1.5, 1.5, -1.5], scale: 1 }
           }
           transition={
-            shaking
+            hammering
+              ? { duration: 0.32, ease: "easeOut" }
+              : shaking
               ? { duration: 0.7, ease: "easeInOut" }
               : opened
               ? { type: "spring", stiffness: 260, damping: 12 }
@@ -708,9 +852,19 @@ const Treasury = () => {
     }
   };
 
+  const coinTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => { if (coinTimer.current) clearTimeout(coinTimer.current); }, []);
+
   const handleChestClick = (id: number) => {
-    playCoinsSound();
-    setOpenedChest(openedChest === id ? null : id);
+    const opening = openedChest !== id;
+    setOpenedChest(opening ? id : null);
+
+    if (coinTimer.current) clearTimeout(coinTimer.current);
+    if (opening) {
+      /* The coins now land when the lid actually flies open, so the clang
+         reads first and the two sounds don't collide. */
+      coinTimer.current = setTimeout(playCoinsSound, HAMMER_SWING + 700);
+    }
   };
 
   return (
