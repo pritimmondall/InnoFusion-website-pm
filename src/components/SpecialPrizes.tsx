@@ -40,7 +40,7 @@ const NEEDS_LIGHT_PLATE = new Set(["Wolfram", "CodeCrafters"]);
 
 /* Logos that ship as their own full-bleed opaque tile. A plate would frame
    them oddly; they just need an edge to separate from the glass behind. */
-const DARK_TILE = new Set(["Avalanche"]);
+const DARK_TILE = new Set<string>([]);
 
 const BountyCard: React.FC<{ prize: SpecialPrize; index: number }> = ({ prize, index }) => {
   const c = prize.themeColor;
@@ -204,14 +204,6 @@ const SpecialPrizes = () => {
       themeColor: "#dc2626",
     },
     {
-      name: "Avalanche",
-      logo: "/Sponsers/Avalanche.webp",
-      link: "https://www.avax.network/",
-      description:
-        "₹3,000 cash prize for winning teams in Blockchain/Web3 & AR/VR tracks, plus exclusive Avalanche-branded merch.",
-      themeColor: "#e84142",
-    },
-    {
       name: "CodeCrafters",
       logo: "/Sponsers/CodeCrafters.webp",
       link: "https://codecrafters.io/",
@@ -305,9 +297,19 @@ const SpecialPrizes = () => {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8 items-stretch">
+      {/*
+        Flex-wrap + justify-center rather than CSS grid: with 8 cards at 3
+        columns the last row only has 2, and a grid always left-aligns a
+        short final row. Each card gets an explicit basis matching the old
+        grid's column widths, so wrapping looks identical — the only
+        difference is an incomplete last row centers instead of hugging
+        the left edge.
+      */}
+      <div className="flex flex-wrap justify-center gap-6 sm:gap-8 items-stretch">
         {specialPrizes.map((prize, index) => (
-          <BountyCard key={prize.name} prize={prize} index={index} />
+          <div key={prize.name} className="w-full sm:w-[calc(50%-1rem)] lg:w-[calc(33.333%-1.334rem)]">
+            <BountyCard prize={prize} index={index} />
+          </div>
         ))}
       </div>
     </motion.div>

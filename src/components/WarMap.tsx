@@ -58,8 +58,8 @@ const timelineEvents: TimelineEvent[] = [
   {
     id: 4,
     title: "Evaluation",
-    date: "Ongoing",
-    description: "Plans under review",
+    date: "Completed",
+    description: "Plans reviewed by judges",
     buildingImage: "/Laboratory.webp",
     characterImage: "/Wizard.webp",
     position: { left: 55, top: 48 },
@@ -92,8 +92,8 @@ const timelineEvents: TimelineEvent[] = [
  * June 12...) kept showing as "ACTIVE" long after they'd happened. This
  * derives status from the date fields instead, so it's always correct
  * without anyone having to remember to update it. `statusOverride` is the
- * only escape hatch, reserved for events with no fixed date (Evaluation's
- * "Ongoing").
+ * only escape hatch, reserved for events with no fixed date to derive
+ * status from.
  */
 function resolveStatus(event: TimelineEvent, now: Date): Status {
   if (event.statusOverride) return event.statusOverride;

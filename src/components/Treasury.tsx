@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Crown, Medal, Award, Sparkles, Brain, Shield, Cpu, Link, Glasses, Cloud, Code2, Lightbulb, Settings, Bell } from "lucide-react";
+import { Crown, Medal, Award, Sparkles, Brain, Shield, Cpu, Link, Cloud, Code2, Lightbulb, Settings, Bell } from "lucide-react";
 
 // Inline Venus icon
 const VenusIcon = ({ size = 24, style }: { size?: number; style?: React.CSSProperties }) => (
@@ -63,7 +63,6 @@ const trackPrizes = [
   { id: 2, name: "Cybersecurity", short: "Cybersecurity", icon: Shield, color: "#3b82f6", prize: "₹3,000 + Premium Swags", troop: "P.E.K.K.A", img: "/characters/track-pekka.png" },
   { id: 3, name: "Robotics & IoT", short: "Robotics & IoT", icon: Cpu, color: "#06b6d4", prize: "₹3,000 + Premium Swags", troop: "Minion", img: "/characters/track-minion.png" },
   { id: 4, name: "Blockchain & Web3", short: "Blockchain", icon: Link, color: "#f59e0b", prize: "₹3,000 + Premium Swags", troop: "Barbarian King", img: "/characters/track-king.png" },
-  { id: 5, name: "Augmented & Virtual Reality", short: "AR & VR", icon: Glasses, color: "#ec4899", prize: "₹3,000 + Premium Swags", troop: "Archer", img: "/characters/track-archer.png" },
   { id: 6, name: "Cloud & Infrastructure", short: "Cloud", icon: Cloud, color: "#38bdf8", prize: "₹3,000 + Premium Swags", troop: "Balloon", img: "/characters/track-balloon.png" },
   { id: 7, name: "Web and App Development", short: "Web & App", icon: Code2, color: "#f97316", prize: "₹3,000 + Premium Swags", troop: "Dragon", img: "/characters/track-dragon.png" },
   { id: 8, name: "Best Innovative Idea Team", short: "Innovation", icon: Lightbulb, color: "#eab308", prize: "₹3,000 + Premium Swags", troop: "Wizard", img: "/characters/track-wizard.png" },
@@ -728,7 +727,7 @@ const TrackPrizeCard = ({
       onHoverStart={() => setHovered(true)}
       onHoverEnd={() => setHovered(false)}
       whileHover={{ y: -8 }}
-      className="group relative flex flex-col items-center rounded-2xl pt-3 pb-4 px-3 overflow-hidden"
+      className="group relative flex flex-col items-center rounded-2xl pt-3 pb-4 px-3 overflow-hidden w-full h-full"
       style={{
         minHeight: 250,
         background: `linear-gradient(165deg, ${c}1f 0%, rgba(255,255,255,0.03) 40%, rgba(10,10,12,0.5) 100%)`,
@@ -934,18 +933,43 @@ const Treasury = () => {
           viewport={{ once: true }}
           className="text-center mb-10 sm:mb-16"
         >
-          <motion.img
-            src="/TrophyIcon.webp"
-            alt=""
-            className="w-32 sm:w-40 md:w-56 h-auto mx-auto mb-4 object-contain"
-            animate={{ scale: [1, 1.1, 1], rotate: [-5, 5, -5] }}
-            transition={{ duration: 2, repeat: Infinity }}
-            style={{
-              filter: isNight
-                ? "drop-shadow(0 0 20px rgba(139,92,246,0.5))"
-                : "drop-shadow(0 0 20px rgba(255,215,0,0.5))",
-            }}
-          />
+          <div className="relative mx-auto mb-4 w-32 sm:w-40 md:w-56" style={{ height: "auto" }}>
+            {/* Pulsing glow pool behind the trophy — separate from the image
+                itself so the glow can breathe independently of the float. */}
+            <motion.div
+              className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full"
+              style={{
+                width: "70%",
+                height: "70%",
+                background: isNight
+                  ? "radial-gradient(circle, rgba(168,85,247,0.55) 0%, rgba(219,39,119,0.25) 45%, transparent 75%)"
+                  : "radial-gradient(circle, rgba(255,215,0,0.5) 0%, rgba(147,51,234,0.2) 45%, transparent 75%)",
+                filter: "blur(22px)",
+              }}
+              animate={{ opacity: [0.5, 1, 0.5], scale: [0.85, 1.15, 0.85] }}
+              transition={{ duration: 2.6, repeat: Infinity, ease: "easeInOut" }}
+            />
+            <motion.img
+              src="/TrophyIcon2.webp"
+              alt=""
+              className="relative w-full h-auto object-contain"
+              /* Wavy float: a gentle up/down bob paired with a soft side-to-side
+                 sway and rock, like it's suspended and drifting rather than
+                 rigidly wobbling in place. */
+              animate={{
+                y: [0, -14, 0, -6, 0],
+                x: [0, 4, 0, -4, 0],
+                rotate: [-3, 3, -2, 2, -3],
+                scale: [1, 1.05, 1, 1.03, 1],
+              }}
+              transition={{ duration: 4.5, repeat: Infinity, ease: "easeInOut" }}
+              style={{
+                filter: isNight
+                  ? "drop-shadow(0 0 18px rgba(168,85,247,0.75)) drop-shadow(0 0 36px rgba(219,39,119,0.45))"
+                  : "drop-shadow(0 0 18px rgba(255,215,0,0.65)) drop-shadow(0 0 36px rgba(147,51,234,0.35))",
+              }}
+            />
+          </div>
           <h2
             className={`font-heading font-semibold text-2xl sm:text-3xl md:text-4xl lg:text-5xl mb-3 sm:mb-4 ${
               isNight ? "text-purple-400 text-glow-purple" : "text-gold-coin text-glow-gold"
@@ -992,22 +1016,21 @@ const Treasury = () => {
             </p>
           </div>
 
-          <div className="flex flex-col gap-3 sm:gap-4">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
-              {trackPrizes.slice(0, 4).map((p, i) => (
-                <TrackPrizeCard key={p.id} prize={p} index={i} isNight={isNight} />
-              ))}
-            </div>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
-              {trackPrizes.slice(4, 8).map((p, i) => (
-                <TrackPrizeCard key={p.id} prize={p} index={i + 4} isNight={isNight} />
-              ))}
-            </div>
-            <div className="grid grid-cols-2 gap-3 sm:gap-4 max-w-xs sm:max-w-sm md:max-w-[50%] mx-auto">
-              {trackPrizes.slice(8).map((p, i) => (
-                <TrackPrizeCard key={p.id} prize={p} index={i + 8} isNight={isNight} />
-              ))}
-            </div>
+          {/*
+            One flex-wrap row instead of three hand-sliced grids. The old
+            version split the deck into fixed groups of 4/4/2, so removing a
+            single track left a lone card forced into a 2-column layout
+            capped at half-width — it rendered visibly smaller than its
+            neighbours and stuck to the left. Flex-wrap + justify-center
+            with an explicit basis per card keeps every card the same size
+            at every count, and centers whatever's left in the final row.
+          */}
+          <div className="flex flex-wrap justify-center gap-3 sm:gap-4">
+            {trackPrizes.map((p, i) => (
+              <div key={p.id} className="w-[calc(50%-0.375rem)] sm:w-[calc(50%-0.5rem)] md:w-[calc(25%-0.75rem)]">
+                <TrackPrizeCard prize={p} index={i} isNight={isNight} />
+              </div>
+            ))}
           </div>
         </motion.div>
 

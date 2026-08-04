@@ -7,7 +7,7 @@ import StorySection from "@/components/StorySection";
 import WarMap from "@/components/WarMap";
 import Treasury from "@/components/Treasury";
 import Sponsors from "@/components/Sponsors";
-import Mentors from "@/components/Mentors";
+import MentorsSection from "@/components/MentorsSection";
 import LocationSection from "@/components/LocationSection";
 import PastEditions from "@/components/PastEditions";
 import FAQ from "@/components/FAQ";
@@ -372,7 +372,7 @@ const Index = () => {
         </ScrollAnimation>
 
         <ScrollAnimation animation="fadeUp">
-          <Mentors />
+          <MentorsSection />
         </ScrollAnimation>
 
         <ScrollAnimation animation="fadeUp">
