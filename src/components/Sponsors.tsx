@@ -62,12 +62,14 @@ const NEEDS_LIGHT_PLATE = new Set([
   "Diversion",
   "Wadhwani",
   "Miro", // navy wordmark reads as near-black on the translucent card
+  "AgentMesh", // black zigzag mark on a transparent bg
+  "Algorand", // navy mark on a transparent bg
 ]);
 
 /* Logos that ship as a full-bleed dark tile (their own opaque background).
    A plate would just frame them oddly — they only need an edge so the tile
    separates from the card behind it. */
-const DARK_TILE = new Set(["CodeRush", "InnovateX", "du", "Hackx", "Avalanche"]);
+const DARK_TILE = new Set(["CodeRush", "InnovateX", "du", "Hackx", "Avalanche", "Myrad"]);
 
 function logoKey(path: string): string {
   return path.split("/").pop()?.replace(/\.(webp|png|jpe?g)$/i, "") ?? "";
@@ -348,6 +350,21 @@ const Sponsors = () => {
       logo: "/Sponsers/Corsair.webp",
       link: "https://corsair.dev/"
     },
+    {
+      name: "AgentMesh",
+      logo: "/Sponsers/AgentMesh.webp",
+      link: "https://www.myradhq.xyz/dashboard"
+    },
+    {
+      name: "Algorand",
+      logo: "/Sponsers/Algorand.webp",
+      link: "https://algorand.co/"
+    },
+    {
+      name: "Myrad",
+      logo: "/Sponsers/Myrad.webp",
+      link: "https://www.agent-mesh.app/"
+    },
 
 
   ];
@@ -401,6 +418,15 @@ const Sponsors = () => {
       name: "Eventopia",
       logo: "/Sponsers/Eventopia.webp",
       link: "https://www.eventopia.in/"
+    },
+  ];
+
+  // 🔬 TECHNICAL PARTNERS - Add new technical partners here
+  const technicalPartners: Sponsor[] = [
+    {
+      name: "SPIE & Optica",
+      logo: "/Sponsers/SPIE-Optica.webp",
+      link: "#"
     },
   ];
 
@@ -914,6 +940,45 @@ const Sponsors = () => {
                     nameColorClass="text-pink-300"
                     logoHeightClass="h-24"
                     logoFilter="drop-shadow(0 0 10px rgba(236,72,153,0.4)) brightness(0) invert(1)"
+                  />
+                </motion.div>
+              ))}
+            </div>
+          </motion.div>
+        )}
+
+        {/* Technical Partners */}
+        {technicalPartners.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="mb-12"
+          >
+            <h3 className="font-display text-xl sm:text-2xl md:text-3xl text-center mb-6 sm:mb-8">
+              <span className="text-green-400 text-glow">Technical</span>
+              <span className="text-foreground"> Partner</span>
+            </h3>
+            <div className="flex flex-wrap justify-center gap-6 max-w-5xl mx-auto px-4">
+              {technicalPartners.map((partner, index) => (
+                <motion.div
+                  key={partner.name}
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  whileInView={{ opacity: 1, scale: 1 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: index * 0.1 }}
+                >
+                  <SponsorCard
+                    sponsor={partner}
+                    sizeClass="w-80"
+                    borderClass="border-green-400/60"
+                    hoverShadow="0 0 50px rgba(34,197,94,0.3)"
+                    frontBg="white"
+                    backBg="linear-gradient(145deg, #1a3a1a 0%, #2d5a2d 40%, #1a3a1a 100%)"
+                    nameColorClass="text-green-300"
+                    logoHeightClass="h-28"
+                    logoFilter="drop-shadow(0 0 8px rgba(34,197,94,0.25))"
+                    whiteFront={true}
                   />
                 </motion.div>
               ))}

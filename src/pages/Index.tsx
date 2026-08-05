@@ -10,6 +10,7 @@ import Sponsors from "@/components/Sponsors";
 import MentorsSection from "@/components/MentorsSection";
 import LocationSection from "@/components/LocationSection";
 import PastEditions from "@/components/PastEditions";
+import PhotoAlbum from "@/components/PhotoAlbum";
 import FAQ from "@/components/FAQ";
 import Footer from "@/components/Footer";
 import RegistrationModal from "@/components/RegistrationModal";
@@ -381,6 +382,10 @@ const Index = () => {
 
         <ScrollAnimation animation="fadeUp">
           <PastEditions />
+        </ScrollAnimation>
+
+        <ScrollAnimation animation="fadeUp">
+          <PhotoAlbum />
         </ScrollAnimation>
 
         <ScrollAnimation animation="fadeUp">

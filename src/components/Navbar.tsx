@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Menu, X, Shield, Trophy, Users, Clock, Crown } from "lucide-react";
+import { Menu, X, Shield, Trophy, Users, Clock, Crown, Camera } from "lucide-react";
 import { useTheme } from "../contexts/ThemeContext";
 
 const navItems = [
@@ -9,6 +9,7 @@ const navItems = [
   { label: "War Map", href: "#timeline", icon: Clock, isRoute: false, tooltip: "⚔️ Battle Timeline & Schedule" },
   { label: "Treasury", href: "#prizes", icon: Trophy, isRoute: false, tooltip: "💰 Loot & Rewards Await!" },
   { label: "Allies", href: "#sponsors", icon: Users, isRoute: false, tooltip: "🤝 Allied Clans (Sponsors)" },
+  { label: "Photo Album", href: "#photo-album", icon: Camera, isRoute: false, tooltip: "📸 Relive InnoFusion 2.0" },
   { label: "Clan Leaders", href: "/clan-leaders", icon: Crown, isRoute: true, tooltip: "👑 Meet Your War Chiefs" },
 ];
 
