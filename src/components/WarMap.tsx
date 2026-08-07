@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Lock, CheckCircle } from "lucide-react";
 
@@ -195,7 +195,19 @@ const EventCard = ({ event, status }: { event: TimelineEvent; status: Status }) 
 );
 
 const WarMap = () => {
-  const now = useMemo(() => new Date(), []);
+  /*
+   * Was `useMemo(() => new Date(), [])` — computed once at mount and never
+   * refreshed, so a tab left open across an event boundary (registration
+   * closing, finale starting) kept showing a stale locked/active/completed
+   * status until the page was reloaded. A minute is plenty of resolution
+   * for day-granularity event dates without re-rendering constantly.
+   */
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 60_000);
+    return () => clearInterval(id);
+  }, []);
+
   const events = useMemo(
     () => timelineEvents.map((e) => ({ ...e, status: resolveStatus(e, now) })),
     [now]

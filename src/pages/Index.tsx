@@ -8,6 +8,8 @@ import WarMap from "@/components/WarMap";
 import Treasury from "@/components/Treasury";
 import Sponsors from "@/components/Sponsors";
 import MentorsSection from "@/components/MentorsSection";
+import Judges from "@/components/Judges";
+import Hackpeers from "@/components/Hackpeers";
 import LocationSection from "@/components/LocationSection";
 import PastEditions from "@/components/PastEditions";
 import PhotoAlbum from "@/components/PhotoAlbum";
@@ -24,7 +26,19 @@ const Index = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [showWelcome, setShowWelcome] = useState(true); // Show welcome popup on load
   const [welcomeDismissed, setWelcomeDismissed] = useState(false);
-  const [isMusicPlaying, setIsMusicPlaying] = useState(true);
+  /*
+   * Starts false, not true. This used to default to true (optimistically
+   * assuming the mount-time autoplay below would succeed), but browsers
+   * regularly block that first play() call without a user gesture — Safari
+   * and Brave especially. When blocked, the toggle button still rendered as
+   * "playing" until the play() promise's .catch() flipped it, which could
+   * lag. That left the button showing sound-on while audio was actually
+   * paused, so a user's first click just resynced the UI (pause a no-op,
+   * flip to false) and only their second click actually started playback.
+   * Starting from false means the button always reflects reality, and the
+   * first genuine click reliably starts the music.
+   */
+  const [isMusicPlaying, setIsMusicPlaying] = useState(false);
   const [isWarMapSection, setIsWarMapSection] = useState(false);
   const audioRef = useRef<HTMLAudioElement>(null);
   const warMapAudioRef = useRef<HTMLAudioElement>(null);
@@ -72,15 +86,43 @@ const Index = () => {
       .catch(() => setIsMusicPlaying(false));
 
     const controller = new AbortController();
-    const startOnGesture = () => {
+    const startOnGesture = (e: Event) => {
+      /*
+       * Ignore the gesture if it landed on the music toggle itself.
+       *
+       * This listener runs on `pointerdown`, which fires *before* `click`.
+       * When Safari had blocked autoplay, a user's first press on the toggle
+       * would hit this handler first: audio was paused, so it started
+       * playback and set isMusicPlaying → true. The `click` event then fired
+       * a moment later, toggleMusic saw isMusicPlaying === true, and dutifully
+       * paused the music again. Net effect: the first press appeared to do
+       * nothing and only the second press "worked" — the two-click bug.
+       *
+       * The toggle has its own handler that already starts playback on a
+       * gesture, so this fallback simply stays out of its way. `once: true`
+       * is deliberately not relied on here — see the re-arm below.
+       */
+      const target = e.target as Element | null;
+      if (target?.closest?.('[data-music-toggle]')) return;
+
       if (!audioRef.current || !audioRef.current.paused) return;
       if (latest.current.isWarMapSection) return;
       audioRef.current.play()
-        .then(() => setIsMusicPlaying(true))
+        .then(() => {
+          setIsMusicPlaying(true);
+          controller.abort();
+        })
         .catch(() => undefined);
     };
 
-    const opts = { once: true, passive: true, signal: controller.signal } as const;
+    /*
+     * Not `once: true`: if the very first gesture is on the toggle button we
+     * bail out above without starting anything, and a `once` listener would
+     * have already unsubscribed itself — leaving no autoplay fallback for any
+     * later gesture. The listener instead removes itself (via the controller)
+     * only once playback has actually begun.
+     */
+    const opts = { passive: true, signal: controller.signal } as const;
     document.addEventListener('pointerdown', startOnGesture, opts);
     document.addEventListener('keydown', startOnGesture, opts);
 
@@ -156,7 +198,14 @@ const Index = () => {
     const active = isWarMapSection ? warMapAudioRef.current : audioRef.current;
     if (!active) return;
 
-    if (isMusicPlaying) {
+    /*
+     * Branch on the element's real `paused` flag rather than isMusicPlaying.
+     * React state can briefly disagree with the actual audio element — an
+     * autoplay attempt resolving late, or another handler starting playback
+     * in the same tick — and trusting it made the button toggle the opposite
+     * way from what the user saw. `paused` is always ground truth.
+     */
+    if (!active.paused) {
       active.pause();
       setIsMusicPlaying(false);
     } else {
@@ -201,6 +250,9 @@ const Index = () => {
       {/* Music Toggle Button - CoC Style */}
       <button
         onClick={toggleMusic}
+        /* Marks this subtree so the document-level autoplay-fallback listener
+           can skip gestures aimed at the toggle — see startOnGesture above. */
+        data-music-toggle
         className="fixed bottom-[72px] sm:bottom-[80px] md:bottom-6 right-3 sm:right-4 z-[60] group touch-manipulation select-none rounded-xl"
         title={isMusicPlaying ? 'Mute music' : 'Play music'}
         aria-label={isMusicPlaying ? 'Mute music' : 'Play music'}
@@ -374,6 +426,14 @@ const Index = () => {
 
         <ScrollAnimation animation="fadeUp">
           <MentorsSection />
+        </ScrollAnimation>
+
+        <ScrollAnimation animation="fadeUp">
+          <Judges />
+        </ScrollAnimation>
+
+        <ScrollAnimation animation="fadeUp">
+          <Hackpeers />
         </ScrollAnimation>
 
         <ScrollAnimation animation="fadeUp">

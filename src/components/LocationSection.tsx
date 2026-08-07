@@ -32,14 +32,12 @@ const LocationSection = () => {
       />
 
       {/* Villager pointing the way, tucked in the left gutter */}
-      <motion.img
+      <img
         src="/characters/villager.webp"
         alt=""
         aria-hidden="true"
-        className="pointer-events-none absolute left-2 xl:left-10 bottom-4 h-40 md:h-48 object-contain opacity-60 hidden lg:block"
-        style={{ filter: "drop-shadow(0 8px 18px rgba(0,0,0,0.6)) drop-shadow(0 0 20px rgba(234,179,8,0.3))" }}
-        animate={{ y: [0, -10, 0] }}
-        transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+        className="coc-float pointer-events-none absolute left-2 xl:left-10 bottom-4 h-40 md:h-48 object-contain opacity-60 hidden lg:block"
+        style={{ filter: "drop-shadow(0 8px 18px rgba(0,0,0,0.6)) drop-shadow(0 0 20px rgba(234,179,8,0.3))", ["--float-dist" as string]: "10px", ["--float-dur" as string]: "4s" }}
       />
 
       <div className="relative z-10 container mx-auto px-4">

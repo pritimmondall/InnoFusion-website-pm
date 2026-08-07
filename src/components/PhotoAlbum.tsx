@@ -20,33 +20,41 @@ import { useTheme } from "@/contexts/ThemeContext";
 interface Photo {
   src: string;
   caption: string;
+  /* height / width, used to balance column heights in the masonry below. */
+  aspect: number;
 }
 
 const PHOTOS: Photo[] = [
-  { src: "/gallery/innofusion2/gallery-01.webp", caption: "Clan Assembly" },
-  { src: "/gallery/innofusion2/gallery-02.webp", caption: "Guardians of the Arena" },
-  { src: "/gallery/innofusion2/gallery-03.webp", caption: "Council of Judges" },
-  { src: "/gallery/innofusion2/gallery-04.webp", caption: "Masked Sentinels" },
-  { src: "/gallery/innofusion2/gallery-05.webp", caption: "The Silent Watch" },
-  { src: "/gallery/innofusion2/gallery-06.webp", caption: "Fortress Gates" },
-  { src: "/gallery/innofusion2/gallery-07.webp", caption: "Iron Sentinel" },
-  { src: "/gallery/innofusion2/gallery-08.webp", caption: "Welcome, Warriors" },
-  { src: "/gallery/innofusion2/gallery-09.webp", caption: "War Room Huddle" },
-  { src: "/gallery/innofusion2/gallery-10.webp", caption: "United Clan" },
-  { src: "/gallery/innofusion2/gallery-11.webp", caption: "Deep in Strategy" },
-  { src: "/gallery/innofusion2/gallery-12.webp", caption: "The Battle Arena" },
-  { src: "/gallery/innofusion2/gallery-13.webp", caption: "Certificate of Valor" },
-  { src: "/gallery/innofusion2/gallery-14.webp", caption: "Spoils of War" },
-  { src: "/gallery/innofusion2/gallery-15.webp", caption: "Champions Rise" },
-  { src: "/gallery/innofusion2/gallery-16.webp", caption: "Voice of the Realm" },
-  { src: "/gallery/innofusion2/gallery-17.webp", caption: "Honored Warriors" },
-  { src: "/gallery/innofusion2/gallery-18.webp", caption: "Strategy Session" },
-  { src: "/gallery/innofusion2/gallery-19.webp", caption: "Triumphant Clan" },
-  { src: "/gallery/innofusion2/gallery-20.webp", caption: "Grand Finale" },
-  { src: "/gallery/innofusion2/gallery-21.webp", caption: "Trophy Bearers" },
-  { src: "/gallery/innofusion2/gallery-22.webp", caption: "Gifts of the Realm" },
-  { src: "/gallery/innofusion2/gallery-23.webp", caption: "Allied Forces" },
-  { src: "/gallery/innofusion2/gallery-24.webp", caption: "Sealing the Victory" },
+  { src: "/gallery/innofusion2/gallery-01.webp", caption: "Clan Assembly", aspect: 0.667 },
+  { src: "/gallery/innofusion2/gallery-02.webp", caption: "Guardians of the Arena", aspect: 0.667 },
+  { src: "/gallery/innofusion2/gallery-03.webp", caption: "Council of Judges", aspect: 0.753 },
+  { src: "/gallery/innofusion2/gallery-04.webp", caption: "Masked Sentinels", aspect: 0.75 },
+  { src: "/gallery/innofusion2/gallery-05.webp", caption: "The Silent Watch", aspect: 0.75 },
+  { src: "/gallery/innofusion2/gallery-06.webp", caption: "Fortress Gates", aspect: 0.75 },
+  { src: "/gallery/innofusion2/gallery-07.webp", caption: "Iron Sentinel", aspect: 1.328 },
+  { src: "/gallery/innofusion2/gallery-08.webp", caption: "Welcome, Warriors", aspect: 1.328 },
+  { src: "/gallery/innofusion2/gallery-09.webp", caption: "War Room Huddle", aspect: 0.75 },
+  { src: "/gallery/innofusion2/gallery-10.webp", caption: "United Clan", aspect: 0.75 },
+  { src: "/gallery/innofusion2/gallery-11.webp", caption: "Deep in Strategy", aspect: 0.64 },
+  { src: "/gallery/innofusion2/gallery-12.webp", caption: "The Battle Arena", aspect: 0.667 },
+  { src: "/gallery/innofusion2/gallery-13.webp", caption: "Certificate of Valor", aspect: 0.667 },
+  { src: "/gallery/innofusion2/gallery-14.webp", caption: "Spoils of War", aspect: 0.667 },
+  { src: "/gallery/innofusion2/gallery-15.webp", caption: "Champions Rise", aspect: 0.667 },
+  { src: "/gallery/innofusion2/gallery-16.webp", caption: "Voice of the Realm", aspect: 1.499 },
+  { src: "/gallery/innofusion2/gallery-17.webp", caption: "Honored Warriors", aspect: 0.667 },
+  { src: "/gallery/innofusion2/gallery-18.webp", caption: "Strategy Session", aspect: 0.667 },
+  { src: "/gallery/innofusion2/gallery-19.webp", caption: "Triumphant Clan", aspect: 0.667 },
+  { src: "/gallery/innofusion2/gallery-20.webp", caption: "Grand Finale", aspect: 0.667 },
+  { src: "/gallery/innofusion2/gallery-21.webp", caption: "Trophy Bearers", aspect: 0.667 },
+  { src: "/gallery/innofusion2/gallery-22.webp", caption: "Gifts of the Realm", aspect: 0.667 },
+  { src: "/gallery/innofusion2/gallery-23.webp", caption: "Allied Forces", aspect: 0.75 },
+  { src: "/gallery/innofusion2/gallery-24.webp", caption: "Sealing the Victory", aspect: 0.75 },
+  { src: "/gallery/innofusion2/gallery-25.webp", caption: "The Hack Floor", aspect: 0.667 },
+  { src: "/gallery/innofusion2/gallery-26.webp", caption: "Fellowship of Four", aspect: 0.667 },
+  { src: "/gallery/innofusion2/gallery-27.webp", caption: "Brainstorm Circle", aspect: 0.667 },
+  { src: "/gallery/innofusion2/gallery-28.webp", caption: "Fortress Roll Call", aspect: 0.667 },
+  { src: "/gallery/innofusion2/gallery-29.webp", caption: "Medals of Honor", aspect: 0.667 },
+  { src: "/gallery/innofusion2/gallery-30.webp", caption: "Clan Gathering", aspect: 0.75 },
 ];
 
 /* Deterministic per-card tilt/pin so re-renders don't reshuffle the wall. */
@@ -75,8 +83,14 @@ const PolaroidCard = ({
       whileInView={{ opacity: 1, y: 0, rotate: tilt }}
       viewport={{ once: true, margin: "-40px" }}
       transition={{ delay: (index % 8) * 0.06, duration: 0.5 }}
-      whileHover={{ rotate: 0, scale: 1.06, zIndex: 20 }}
-      className="group relative mb-4 block w-full break-inside-avoid text-left cursor-pointer focus:outline-none"
+      /*
+       * No `scale` here on purpose — a translateY lift keeps the card's box
+       * the same size on hover, which plays safer across browsers than a
+       * scale-up. (The layout itself no longer uses CSS multi-column masonry;
+       * see the note above the grid below for why that was replaced.)
+       */
+      whileHover={{ rotate: 0, y: -8, zIndex: 20 }}
+      className="group relative block w-full text-left cursor-pointer focus:outline-none"
       style={{ transformOrigin: "center 20%" }}
       aria-label={`Open photo: ${photo.caption}`}
     >
@@ -232,9 +246,59 @@ const Lightbox = ({
   );
 };
 
+/*
+ * How many photo columns to render for the wall, mirroring the old Tailwind
+ * `columns-2 sm:columns-3 lg:columns-4` breakpoints (640px / 1024px).
+ */
+const getColumnCount = () => {
+  if (typeof window === "undefined") return 2;
+  const w = window.innerWidth;
+  if (w >= 1024) return 4;
+  if (w >= 640) return 3;
+  return 2;
+};
+
+/*
+ * Buckets PHOTOS into `count` columns, each rendered as a plain flex column
+ * (see the note above the grid markup for why this replaced the CSS
+ * `columns-*` masonry approach).
+ *
+ * This walks the photos in order and always drops the next one into
+ * whichever column is currently shortest, tracking each column's running
+ * height via the photo's known aspect ratio (height/width). A naive
+ * round-robin (index % count) ignores that photos have different heights,
+ * so columns can end up noticeably uneven — e.g. one column filled with
+ * portrait shots finishing well short of a neighboring column full of wide
+ * landscape ones, leaving a visible gap at the bottom of the wall. Greedily
+ * balancing by estimated height keeps all columns ending at roughly the
+ * same point.
+ */
+const bucketPhotos = (photos: Photo[], count: number) => {
+  const columns: { photo: Photo; index: number }[][] = Array.from({ length: count }, () => []);
+  const heights = new Array(count).fill(0);
+  photos.forEach((photo, index) => {
+    let shortest = 0;
+    for (let c = 1; c < count; c++) {
+      if (heights[c] < heights[shortest]) shortest = c;
+    }
+    columns[shortest].push({ photo, index });
+    heights[shortest] += photo.aspect;
+  });
+  return columns;
+};
+
 const PhotoAlbum = () => {
   const { isNight } = useTheme();
   const [openIndex, setOpenIndex] = useState<number | null>(null);
+  const [columnCount, setColumnCount] = useState<number>(getColumnCount);
+
+  useEffect(() => {
+    const onResize = () => setColumnCount(getColumnCount());
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+
+  const columns = bucketPhotos(PHOTOS, columnCount);
 
   const close = useCallback(() => setOpenIndex(null), []);
   const prev = useCallback(
@@ -309,17 +373,31 @@ const PhotoAlbum = () => {
           </p>
         </motion.div>
 
-        {/* Polaroid wall — masonry columns so mixed portrait/landscape
-            shots settle naturally instead of being cropped to one ratio. */}
-        <div className="columns-2 sm:columns-3 lg:columns-4 gap-4 max-w-6xl mx-auto px-1 sm:px-2">
-          {PHOTOS.map((photo, index) => (
-            <PolaroidCard
-              key={photo.src}
-              photo={photo}
-              index={index}
-              isNight={isNight}
-              onOpen={() => setOpenIndex(index)}
-            />
+        {/*
+          Polaroid wall — mixed portrait/landscape shots settle naturally
+          into unequal-height columns instead of being cropped to one ratio.
+
+          This used to be CSS multi-column masonry (`columns-*`), but both
+          Chromium and WebKit have a rendering bug where multicol fragment
+          boundaries can leave items in a later column painting as empty
+          (just the pin + shadow, no photo) — reported here on Mac Safari.
+          Bucketing the photos into real flex columns in JS sidesteps that
+          entirely: each card is now a normal flex child, not a multicol
+          fragment.
+        */}
+        <div className="flex gap-4 max-w-6xl mx-auto px-1 sm:px-2">
+          {columns.map((col, colIndex) => (
+            <div key={colIndex} className="flex flex-1 flex-col gap-4">
+              {col.map(({ photo, index }) => (
+                <PolaroidCard
+                  key={photo.src}
+                  photo={photo}
+                  index={index}
+                  isNight={isNight}
+                  onOpen={() => setOpenIndex(index)}
+                />
+              ))}
+            </div>
           ))}
         </div>
       </div>

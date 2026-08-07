@@ -72,15 +72,29 @@ const Navbar = () => {
 
   return (
     <>
-      {/* Desktop Navbar */}
-      <motion.nav
-        initial={{ y: -100 }}
-        animate={{ y: 0 }}
-        transition={{ duration: 0.5 }}
+      {/*
+        Desktop Navbar.
+
+        The slide-down entrance animation lives on an inner <motion.div>,
+        not on this outer fixed nav. Safari has a long-standing bug where a
+        `position: fixed` element carrying `backdrop-filter` (here, nested
+        `.nav-glass`) leaves stale/"ghosted" pixels behind as the page
+        scrolls — reported worse when that fixed element also has its own
+        transform history from an entrance animation. Keeping this element
+        itself untransformed, and forcing it onto its own stable compositing
+        layer with a static translateZ(0), is the standard workaround.
+      */}
+      <nav
         className="fixed top-0 left-0 right-0 z-40 hidden md:block"
+        style={{ transform: "translateZ(0)" }}
         aria-label="Primary"
       >
-        <div className="mx-4 mt-4">
+        <motion.div
+          initial={{ y: -100 }}
+          animate={{ y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="mx-4 mt-4"
+        >
           <div className={`${panelClass} flex items-center justify-between px-4 lg:px-6 py-3`}>
             {/* Logo Section with Institution Logos */}
             <motion.div
@@ -132,7 +146,7 @@ const Navbar = () => {
             <div className="flex items-center gap-2">
               {navItems.map((item) => (
                 item.isRoute ? (
-                  <Link key={item.label} to={item.href} className="relative group">
+                  <Link key={item.label} to={item.href} className="relative group" onClick={(e) => e.currentTarget.blur()}>
                     <motion.div
                       whileHover={{ scale: 1.05, backgroundColor: isNight ? 'rgba(168,85,247,0.15)' : 'rgba(234,179,8,0.15)' }}
                       whileTap={{ scale: 0.95 }}
@@ -158,7 +172,18 @@ const Navbar = () => {
                     <motion.button
                       whileHover={{ scale: 1.05, backgroundColor: isNight ? 'rgba(168,85,247,0.15)' : 'rgba(234,179,8,0.15)' }}
                       whileTap={{ scale: 0.95 }}
-                      onClick={() => scrollToSection(item.href)}
+                      onClick={(e) => {
+                        scrollToSection(item.href);
+                        /*
+                         * The tooltip shows on group-focus-within (for keyboard
+                         * users tabbing to the button) as well as group-hover.
+                         * A mouse click also focuses the button, and that focus
+                         * never clears on its own, so without this the tooltip
+                         * stayed stuck open until the user happened to click
+                         * something else on the page.
+                         */
+                        e.currentTarget.blur();
+                      }}
                       className={`flex items-center gap-2 font-body font-bold text-foreground ${hoverColor} transition-all px-4 py-3 rounded-lg`}
                     >
                       <item.icon size={18} />
@@ -166,8 +191,8 @@ const Navbar = () => {
                     </motion.button>
                     {/* Tooltip */}
                     <div aria-hidden="true" className={`absolute left-1/2 -translate-x-1/2 top-full mt-2 px-3 py-2 rounded-lg text-xs font-body whitespace-nowrap opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity duration-200 pointer-events-none z-50 ${
-                      isNight 
-                        ? 'bg-purple-900/95 text-purple-100 border border-purple-500/50 shadow-lg shadow-purple-500/20' 
+                      isNight
+                        ? 'bg-purple-900/95 text-purple-100 border border-purple-500/50 shadow-lg shadow-purple-500/20'
                         : 'bg-amber-900/95 text-amber-100 border border-yellow-500/50 shadow-lg shadow-yellow-500/20'
                     }`}>
                       <div className={`absolute -top-1.5 left-1/2 -translate-x-1/2 w-3 h-3 rotate-45 ${
@@ -180,17 +205,25 @@ const Navbar = () => {
               ))}
             </div>
           </div>
-        </div>
-      </motion.nav>
+        </motion.div>
+      </nav>
 
-      {/* Mobile Bottom Bar */}
-      <motion.nav
-        initial={{ y: 100 }}
-        animate={{ y: 0 }}
-        transition={{ duration: 0.5 }}
+      {/*
+        Mobile Bottom Bar — same fixed + backdrop-filter + entrance-transform
+        combination as the desktop nav above, so it gets the same fix: the
+        transform lives on an inner <motion.div>, the outer fixed element
+        stays untransformed (aside from the static translateZ(0) layer hint).
+      */}
+      <nav
         className="fixed bottom-0 left-0 right-0 z-40 md:hidden pb-safe"
+        style={{ transform: "translateZ(0)" }}
         aria-label="Primary mobile"
       >
+        <motion.div
+          initial={{ y: 100 }}
+          animate={{ y: 0 }}
+          transition={{ duration: 0.5 }}
+        >
         <div className="mx-1 sm:mx-2 mb-1 sm:mb-2">
           <div className={`${panelClass} flex items-center justify-around px-1 sm:px-2 py-2 sm:py-3`}>
             {navItems.slice(0, 4).map((item) => (
@@ -229,7 +262,8 @@ const Navbar = () => {
             </motion.button>
           </div>
         </div>
-      </motion.nav>
+        </motion.div>
+      </nav>
 
       {/* Mobile Menu Overlay */}
       <AnimatePresence>

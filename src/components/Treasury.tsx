@@ -515,6 +515,68 @@ const ChestCard = ({
           )}
         </AnimatePresence>
 
+        {/*
+          ── Soft halo behind the chest ──
+
+          The glow used to come from `drop-shadow()` on the chest <img>, but a
+          drop-shadow traces the sprite's alpha silhouette — and these chest
+          sprites are very nearly filled squares (the artwork's outline is a
+          blocky crate). The result was a hard-edged square of light around
+          each chest instead of a glow.
+
+          A blurred radial gradient sitting behind the sprite gives a round,
+          organic halo whose shape is independent of the artwork. The image
+          below now carries only a plain contact shadow.
+        */}
+        {/*
+          Two layers: a wide, soft bloom and a tighter, brighter core. Both are
+          built from `burst` (a solid hex) rather than `glow` (already a
+          low-alpha rgba) — stacking a translucent colour under a gradient
+          falloff, a blur and an opacity animation multiplied down to almost
+          nothing, which is why the first version of this halo was invisible.
+          Alpha is applied deliberately via the hex suffixes below instead.
+        */}
+        <motion.div
+          aria-hidden="true"
+          className="absolute left-1/2 top-1/2 rounded-full pointer-events-none z-0"
+          style={{
+            width: 400,
+            height: 400,
+            marginLeft: -200,
+            marginTop: -200,
+            background: `radial-gradient(circle, ${burst}6b 0%, ${burst}42 30%, ${burst}1a 55%, transparent 80%)`,
+            filter: "blur(38px)",
+          }}
+          animate={{
+            opacity: opened ? [0.95, 1, 0.95] : shaking ? 1 : [0.8, 1, 0.8],
+            scale: opened ? 1.3 : shaking ? 1.15 : [0.94, 1.06, 0.94],
+          }}
+          transition={{ duration: opened ? 2 : 3.5, repeat: Infinity, ease: "easeInOut" }}
+        />
+        <motion.div
+          aria-hidden="true"
+          className="absolute left-1/2 top-1/2 rounded-full pointer-events-none z-0"
+          style={{
+            /*
+             * Deliberately wider than the chest sprite (which is at most
+             * 192px). A core the same size as the chest would have all of its
+             * brightness hidden behind the artwork and reach transparent
+             * exactly at the edge, contributing nothing visible.
+             */
+            width: 260,
+            height: 260,
+            marginLeft: -130,
+            marginTop: -130,
+            background: `radial-gradient(circle, ${burst}d9 0%, ${burst}8c 44%, ${burst}33 64%, transparent 80%)`,
+            filter: "blur(22px)",
+          }}
+          animate={{
+            opacity: opened ? [0.95, 1, 0.95] : shaking ? 1 : [0.75, 0.95, 0.75],
+            scale: opened ? 1.25 : shaking ? 1.12 : [0.96, 1.08, 0.96],
+          }}
+          transition={{ duration: opened ? 2 : 3.5, repeat: Infinity, ease: "easeInOut" }}
+        />
+
         {/* ── The chest sprite itself ── */}
         <motion.div
           /* Remount on each blow so the squash replays all three times */
@@ -565,11 +627,17 @@ const ChestCard = ({
               exit={{ opacity: 0 }}
               transition={{ type: "spring", stiffness: 300, damping: 14 }}
               style={{
+                /*
+                 * Contact shadow + brightness only — no coloured glow here.
+                 * The halo is the blurred radial gradient rendered behind
+                 * this sprite; putting the glow on the image made it trace
+                 * the near-square silhouette (see the note above).
+                 */
                 filter: opened
-                  ? `drop-shadow(0 0 30px ${glow}) drop-shadow(0 0 60px ${glow}) brightness(1.15)`
+                  ? "drop-shadow(0 6px 14px rgba(0,0,0,0.55)) brightness(1.15)"
                   : shaking
-                  ? `drop-shadow(0 0 24px ${glow}) brightness(1.3)`
-                  : `drop-shadow(0 8px 18px rgba(0,0,0,0.7)) drop-shadow(0 0 14px ${glow})`,
+                  ? "drop-shadow(0 6px 14px rgba(0,0,0,0.6)) brightness(1.3)"
+                  : "drop-shadow(0 8px 18px rgba(0,0,0,0.7))",
                 transition: "filter 0.3s ease",
               }}
             />
@@ -760,20 +828,23 @@ const TrackPrizeCard = ({
 
       {/* ── Character stage ── */}
       <div className="relative z-10 w-full flex items-end justify-center" style={{ height: 118 }}>
-        {/* Rune pedestal glow */}
-        <motion.div
-          className="absolute bottom-0 left-1/2 -translate-x-1/2 rounded-full pointer-events-none"
+        {/*
+          Rune pedestal glow. A blurred element animating forever is one of
+          the more expensive things to hand the main thread, and there are
+          nine of them — so this pulses via CSS instead of framer-motion.
+        */}
+        <div
+          className="coc-pulse absolute bottom-0 left-1/2 rounded-full pointer-events-none"
           style={{
             width: 92,
             height: 26,
+            marginLeft: -46,
             background: `radial-gradient(ellipse, ${c} 0%, ${c}55 40%, transparent 72%)`,
             filter: "blur(9px)",
+            ["--pulse-scale" as string]: hovered ? "1.35" : "1",
+            ["--pulse-min" as string]: hovered ? "0.85" : "0.35",
+            ["--pulse-max" as string]: hovered ? "1" : "0.55",
           }}
-          animate={{
-            opacity: hovered ? [0.85, 1, 0.85] : [0.35, 0.55, 0.35],
-            scaleX: hovered ? 1.35 : 1,
-          }}
-          transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
         />
 
         {/* Pedestal ring */}
@@ -804,21 +875,37 @@ const TrackPrizeCard = ({
           />
         ))}
 
-        {/* The troop */}
-        <motion.img
-          src={prize.img}
-          alt={prize.troop}
-          loading="lazy"
-          className="relative z-10 object-contain"
-          style={{ height: 108, transformOrigin: "bottom center" }}
-          /* Float only — no tilt. */
-          animate={hovered ? { y: -14, scale: 1.16 } : { y: [0, -6, 0], scale: 1 }}
-          transition={
-            hovered
-              ? { type: "spring", stiffness: 320, damping: 16 }
-              : { duration: 3.4 + (index % 4) * 0.4, repeat: Infinity, ease: "easeInOut" }
-          }
-        />
+        {/*
+          The troop.
+
+          Idle bobbing is a CSS animation on the wrapper (compositor-driven,
+          and there are nine of these cards), while the hover lift is a plain
+          CSS transition on the image itself. Splitting them across two
+          elements keeps the two transforms from fighting over the same
+          property; the bob is simply paused while hovered.
+        */}
+        <div
+          className="coc-float relative z-10"
+          style={{
+            ["--float-dist" as string]: "6px",
+            ["--float-dur" as string]: `${3.4 + (index % 4) * 0.4}s`,
+            animationPlayState: hovered ? "paused" : "running",
+          }}
+        >
+          <img
+            src={prize.img}
+            alt={prize.troop}
+            loading="lazy"
+            decoding="async"
+            className="object-contain"
+            style={{
+              height: 108,
+              transformOrigin: "bottom center",
+              transform: hovered ? "translateY(-14px) scale(1.16)" : "none",
+              transition: "transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1)",
+            }}
+          />
+        </div>
       </div>
 
       {/* ── Plaque ── */}

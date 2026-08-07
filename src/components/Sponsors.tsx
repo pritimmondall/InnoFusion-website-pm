@@ -579,16 +579,29 @@ const Sponsors = () => {
           viewport={{ once: true }}
           className="relative text-center mb-8 sm:mb-12"
         >
-          {/* Barbarian King standing guard, left of the header. Roars on hover. */}
-          <motion.img
-            src="/characters/track-king.png"
-            alt=""
-            className="absolute left-0 xl:-left-24 top-1/2 -translate-y-1/2 h-72 md:h-[22rem] object-contain opacity-70 hidden lg:block cursor-default"
-            animate={{ y: [0, -10, 0] }}
-            whileHover={{ opacity: 1, scale: 1.1 }}
-            transition={{ duration: 3.6, repeat: Infinity, ease: "easeInOut" }}
-            style={{ filter: "drop-shadow(0 6px 16px rgba(0,0,0,0.6)) drop-shadow(0 0 22px rgba(255,190,60,0.45))" }}
-          />
+          {/* Barbarian King standing guard, left of the header. Roars on hover.
+              Positioning lives on the wrapper and the idle bob on an inner
+              element, so the hover scale below has a transform of its own to
+              animate without fighting the float. */}
+          <div className="absolute left-0 xl:-left-24 top-1/2 -translate-y-1/2 hidden lg:block cursor-default">
+            <div
+              className="coc-float"
+              style={{
+                ["--float-dist" as string]: "10px",
+                ["--float-dur" as string]: "3.6s",
+              }}
+            >
+              <img
+                src="/characters/track-king.png"
+                alt=""
+                aria-hidden="true"
+                loading="lazy"
+                decoding="async"
+                className="h-72 md:h-[22rem] object-contain opacity-70 transition-[opacity,transform] duration-300 hover:opacity-100 hover:scale-110"
+                style={{ filter: "drop-shadow(0 6px 16px rgba(0,0,0,0.6)) drop-shadow(0 0 22px rgba(255,190,60,0.45))" }}
+              />
+            </div>
+          </div>
           {/*
             Dragon watching the header, right side. The mirror sits on a static
             wrapper — animating scaleX to -1 would tween through zero width and

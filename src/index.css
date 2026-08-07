@@ -781,4 +781,55 @@
     0%, 100% { transform: scaleY(1) translate3d(0, 0, 0); }
     50% { transform: scaleY(1.02) translate3d(0, -3px, 0); }
   }
+
+  /*
+   * Decorative bobbing for the floating troop sprites.
+   *
+   * These used to be framer-motion `animate={{ y: [...] }}` loops with
+   * `repeat: Infinity`. framer-motion drives keyframes from JS on the main
+   * thread via requestAnimationFrame, and the page renders dozens of these
+   * at once (one per mentor/judge/hackpeer card, per track card, per
+   * sponsor tile). Several hundred concurrent main-thread animations is
+   * enough to visibly cost frames while scrolling, which was very
+   * noticeable in Safari.
+   *
+   * As a plain CSS transform animation the browser runs each one on the
+   * compositor instead, off the main thread, and — unlike the JS version —
+   * automatically throttles them while the tab or element isn't being
+   * painted. Distance, duration and delay are tunable per element through
+   * the custom properties below.
+   */
+  .coc-float {
+    animation: coc-float var(--float-dur, 2.8s) ease-in-out var(--float-delay, 0s) infinite;
+    will-change: transform;
+  }
+
+  @keyframes coc-float {
+    0%, 100% { transform: translate3d(0, 0, 0); }
+    50% { transform: translate3d(0, calc(var(--float-dist, 5px) * -1), 0); }
+  }
+
+  /*
+   * Slow glow pulse for the blurred pedestal/aura elements, for the same
+   * reason as .coc-float above — a permanently animating blurred layer is
+   * expensive to drive from JS, and these render once per card.
+   */
+  .coc-pulse {
+    animation: coc-pulse var(--pulse-dur, 2s) ease-in-out infinite;
+    transform: scaleX(var(--pulse-scale, 1));
+    will-change: opacity;
+  }
+
+  @keyframes coc-pulse {
+    0%, 100% { opacity: var(--pulse-min, 0.35); }
+    50% { opacity: var(--pulse-max, 0.55); }
+  }
+
+  /* Respect an explicit OS-level request for less motion. */
+  @media (prefers-reduced-motion: reduce) {
+    .coc-float,
+    .coc-pulse {
+      animation: none;
+    }
+  }
 }

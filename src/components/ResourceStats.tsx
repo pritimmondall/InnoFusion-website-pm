@@ -150,16 +150,12 @@ const ResourceStats = () => {
       <div className="absolute inset-0" style={{ background: '#0a0a0c' }} />
 
       {/* Wizard keeping watch */}
-      <motion.img
+      <img
         src="/characters/wizard.webp"
         alt=""
         aria-hidden="true"
-        className="pointer-events-none absolute -left-4 bottom-0 h-40 object-contain opacity-25 hidden lg:block"
-        animate={{ y: [0, -8, 0] }}
-        transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-        style={{
-          filter: "drop-shadow(0 0 18px rgba(59,130,246,0.35))",
-        }}
+        className="coc-float pointer-events-none absolute -left-4 bottom-0 h-40 object-contain opacity-25 hidden lg:block"
+        style={{ filter: "drop-shadow(0 0 18px rgba(59,130,246,0.35))", ["--float-dist" as string]: "8px", ["--float-dur" as string]: "4s" }}
       />
 
       <div className="relative z-10 container mx-auto px-4">
