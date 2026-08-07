@@ -1,5 +1,4 @@
 import { motion } from "framer-motion";
-import { Gavel, Scale } from "lucide-react";
 import { useTheme } from "@/contexts/ThemeContext";
 import { Person, PersonCard, PERSON_CARD_HOVER_CSS } from "@/components/PersonCard";
 
@@ -64,14 +63,15 @@ const Judges = () => {
           viewport={{ once: true }}
           className="mb-10 text-center sm:mb-14"
         >
-          <motion.div
-            className="flex items-center justify-center gap-3 mb-4"
-            animate={{ y: [0, -5, 0] }}
-            transition={{ duration: 2, repeat: Infinity }}
-          >
-            <Gavel className={`w-8 h-8 sm:w-10 sm:h-10 ${titleColor}`} />
-            <Scale className={`w-6 h-6 sm:w-8 sm:h-8 ${titleColor} opacity-70`} />
-          </motion.div>
+          {/* Clan Castle — matches the building-icon pattern used by
+              Hackpeers (Builder Hut) and Mentors (Laboratory). */}
+          <img
+            src="/ClanCastle.webp"
+            alt=""
+            aria-hidden="true"
+            className="coc-float mx-auto mb-3 h-auto w-24 object-contain sm:w-32 md:w-40"
+            style={{ ["--float-dist" as string]: "6px", ["--float-dur" as string]: "2.6s" }}
+          />
           <h2 className={`font-heading font-semibold text-2xl sm:text-3xl md:text-4xl lg:text-5xl mb-3 sm:mb-4 ${titleColor} ${isNight ? "text-glow-purple" : "text-glow-gold"}`}>
             JUDGES
           </h2>

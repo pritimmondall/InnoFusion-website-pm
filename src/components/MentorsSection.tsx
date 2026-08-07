@@ -100,13 +100,16 @@ const MentorsSection = () => {
           viewport={{ once: true }}
           className="mb-10 text-center sm:mb-14"
         >
+          {/* Laboratory — the Builder Hut icon moved to the Judges section,
+              so Mentors gets its own building: fitting for people who guide
+              with hands-on expertise. */}
           <img
-            src="/Builder Hut.webp"
+            src="/Laboratory.webp"
             alt=""
             aria-hidden="true"
             className="coc-float mx-auto mb-3 h-auto w-24 object-contain sm:w-32 md:w-40"
-        style={{ ["--float-dist" as string]: "6px", ["--float-dur" as string]: "2.6s" }}
-      />
+            style={{ ["--float-dist" as string]: "6px", ["--float-dur" as string]: "2.6s" }}
+          />
           <h2 className="font-heading text-2xl font-semibold text-gold-coin text-glow-gold sm:text-3xl md:text-4xl lg:text-5xl">
             MENTORS
           </h2>

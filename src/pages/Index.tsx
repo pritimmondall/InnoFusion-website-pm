@@ -425,11 +425,11 @@ const Index = () => {
         </ScrollAnimation>
 
         <ScrollAnimation animation="fadeUp">
-          <MentorsSection />
+          <Judges />
         </ScrollAnimation>
 
         <ScrollAnimation animation="fadeUp">
-          <Judges />
+          <MentorsSection />
         </ScrollAnimation>
 
         <ScrollAnimation animation="fadeUp">
